@@ -93,6 +93,11 @@ class Router
             "guest" => GuestMiddleware::class,
         ];
 
+        if (str_starts_with($name, "permission:")) {
+            $permission = substr($name, strlen("permission:"));
+            return new PermissionMiddleware($permission);
+        }
+
         $class = $map[$name] ?? $name;
 
         if (!class_exists($class)) {

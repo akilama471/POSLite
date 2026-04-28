@@ -40,6 +40,7 @@ class DashboardController
             ["key" => "p_56", "label" => "Cashier", "href" => "#", "migrated" => false],
             ["key" => "p_62", "label" => "Reports", "href" => "#", "migrated" => false],
             ["key" => "p_77", "label" => "SMS Broadcast", "href" => "#", "migrated" => false],
+            ["key" => "p_63", "label" => "System Settings", "href" => "/settings", "migrated" => true],
         ];
     }
 }

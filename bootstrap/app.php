@@ -91,3 +91,19 @@ function verify_csrf(?string $token): bool
         && isset($_SESSION["_csrf_token"])
         && hash_equals($_SESSION["_csrf_token"], $token);
 }
+
+function auth_user(): ?array
+{
+    return $_SESSION["auth"] ?? null;
+}
+
+function can(string $permission): bool
+{
+    $auth = auth_user();
+
+    if (!is_array($auth)) {
+        return false;
+    }
+
+    return (bool) ($auth["permissions"][$permission] ?? false);
+}

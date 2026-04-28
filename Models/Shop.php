@@ -14,4 +14,13 @@ class Shop extends Model
         $shop = $stmt->fetch();
         return $shop ?: null;
     }
+
+    public function activeShops(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM sys_shop WHERE status < 2 AND shopid > 0 ORDER BY shopid ASC",
+        );
+
+        return $stmt->fetchAll();
+    }
 }
