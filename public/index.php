@@ -1,13 +1,15 @@
 <?php
-require_once "../inc/bootstrap.php";
-require_once "../core/Router.php";
+
+declare(strict_types=1);
+
+require_once dirname(__DIR__) . "/bootstrap/app.php";
 
 $router = new Router();
 
-// Define routes
 $router->get("/", "HomeController@index");
-$router->get("/dashboard", "HomeController@dashboard");
-$router->get("/products", "ProductController@index");
-$router->get("/products/{id}", "ProductController@show");
+$router->get("/login", "AuthController@showLoginForm", ["guest"]);
+$router->post("/login", "AuthController@login", ["guest"]);
+$router->post("/logout", "AuthController@logout", ["auth"]);
+$router->get("/dashboard", "DashboardController@index", ["auth"]);
 
 $router->dispatch($_SERVER["REQUEST_URI"], $_SERVER["REQUEST_METHOD"]);

@@ -1,14 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 class User extends Model
 {
-    protected $table = "users";
+    protected $table = "sys_user";
 
-    public function findByEmail($email)
+    public function findActiveByUsername(string $username): ?array
     {
-        $stmt = $this->db->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$email]);
+        $stmt = $this->db->prepare(
+            "SELECT * FROM sys_user WHERE ankaya = :username AND statusu = 1 LIMIT 1",
+        );
+        $stmt->execute(["username" => $username]);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $stmt->fetch();
+        return $user ?: null;
     }
 }

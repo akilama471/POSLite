@@ -1,23 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 class Database
 {
-    private static $instance = null;
-    private $pdo;
+    private static ?PDO $instance = null;
 
-    private function __construct()
+    public static function connect(): PDO
     {
-        $this->pdo = new PDO("mysql:host=localhost;dbname=pos", "root", "", [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]);
-    }
-
-    public static function connect()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
+        if (self::$instance instanceof PDO) {
+            return self::$instance;
         }
 
-        return self::$instance->pdo;
+        $host = app_env("DB_HOST", "localhost");
+        $port = app_env("DB_PORT", "3306");
+        $database = app_env("DB_DATABASE", "sirixmnt_admin_db_4nshop");
+        $username = app_env("DB_USERNAME", "sirixmnt_admin_db_4nshop");
+        $password = app_env("DB_PASSWORD", "SQp0~!78*gdv");
+
+        $dsn = sprintf(
+            "mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4",
+            $host,
+            $port,
+            $database,
+            $database,
+        );
+
+        self::$instance = new PDO($dsn, $username, $password, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+
+        return self::$instance;
     }
 }

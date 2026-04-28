@@ -1,70 +1,110 @@
 <?php
 
+declare(strict_types=1);
+
 class Router
 {
-    private $routes = [];
+    private array $routes = [];
 
-    public function get($path, $handler)
+    public function get(string $path, string $handler, array $middlewares = []): void
     {
-        $this->routes["GET"][] = [$path, $handler];
+        $this->register("GET", $path, $handler, $middlewares);
     }
 
-    public function post($path, $handler)
+    public function post(string $path, string $handler, array $middlewares = []): void
     {
-        $this->routes["POST"][] = [$path, $handler];
+        $this->register("POST", $path, $handler, $middlewares);
     }
 
-    public function dispatch($uri, $method)
+    public function dispatch(string $uri, string $method): void
     {
-        $uri = parse_url($uri, PHP_URL_PATH);
+        $uri = parse_url($uri, PHP_URL_PATH) ?: "/";
+        $method = strtoupper($method);
 
         foreach ($this->routes[$method] ?? [] as $route) {
-            [$path, $handler] = $route;
+            $pattern = $this->convertToRegex($route["path"]);
 
-            $pattern = $this->convertToRegex($path);
-
-            if (preg_match($pattern, $uri, $matches)) {
-                array_shift($matches); // remove full match
-
-                return $this->callHandler($handler, $matches);
+            if (preg_match($pattern, $uri, $matches) !== 1) {
+                continue;
             }
+
+            array_shift($matches);
+            $this->callHandler($route["handler"], $matches, $route["middlewares"]);
+            return;
         }
 
         http_response_code(404);
-        echo "404 Not Found";
+        View::make("errors/404", ["title" => "Not Found"]);
     }
 
-    private function convertToRegex($path)
-    {
-        return "#^" . preg_replace("#\{([\w]+)\}#", "([\w-]+)", $path) . "$#";
+    private function register(
+        string $method,
+        string $path,
+        string $handler,
+        array $middlewares = [],
+    ): void {
+        $this->routes[$method][] = [
+            "path" => $path,
+            "handler" => $handler,
+            "middlewares" => $middlewares,
+        ];
     }
 
-    private function callHandler($handler, $params, $middlewares = [])
+    private function convertToRegex(string $path): string
     {
-        [$controller, $method] = explode("@", $handler);
+        $pattern = preg_replace("#\{([\w]+)\}#", "([\w-]+)", $path);
+        return "#^" . $pattern . "$#";
+    }
 
-        require_once "../app/Controllers/{$controller}.php";
-        $controllerInstance = new $controller();
+    private function callHandler(string $handler, array $params, array $middlewares): void
+    {
+        [$controllerName, $method] = explode("@", $handler, 2);
 
-        $request = $_REQUEST;
-
-        $final = function () use ($controllerInstance, $method, $params) {
-            return call_user_func_array(
-                [$controllerInstance, $method],
-                $params,
-            );
-        };
-
-        if (!empty($middlewares)) {
-            $manager = new MiddlewareManager();
-
-            foreach ($middlewares as $mw) {
-                $manager->add($mw);
-            }
-
-            return $manager->run($request, $final);
+        if (!class_exists($controllerName)) {
+            throw new RuntimeException("Controller not found: {$controllerName}");
         }
 
-        return $final();
+        $controller = new $controllerName();
+        $request = new Request();
+
+        $final = function () use ($controller, $method, $params, $request) {
+            $arguments = array_merge([$request], $params);
+            return call_user_func_array([$controller, $method], $arguments);
+        };
+
+        if ($middlewares === []) {
+            $final();
+            return;
+        }
+
+        $manager = new MiddlewareManager();
+
+        foreach ($middlewares as $middleware) {
+            $manager->add($this->resolveMiddleware($middleware));
+        }
+
+        $manager->run($request, $final);
+    }
+
+    private function resolveMiddleware(string $name): Middleware
+    {
+        $map = [
+            "auth" => AuthMiddleware::class,
+            "guest" => GuestMiddleware::class,
+        ];
+
+        $class = $map[$name] ?? $name;
+
+        if (!class_exists($class)) {
+            throw new RuntimeException("Middleware not found: {$name}");
+        }
+
+        $instance = new $class();
+
+        if (!$instance instanceof Middleware) {
+            throw new RuntimeException("Invalid middleware: {$class}");
+        }
+
+        return $instance;
     }
 }

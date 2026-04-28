@@ -1,13 +1,13 @@
 <?php
 
-class AdminMiddleware
+declare(strict_types=1);
+
+class AuthMiddleware implements Middleware
 {
     public function handle($request, $next)
     {
-        if ($_SESSION["role"] !== "admin") {
-            http_response_code(403);
-            echo "403 Forbidden";
-            exit();
+        if (empty($_SESSION["auth"]["user_id"])) {
+            redirect("/login");
         }
 
         return $next();

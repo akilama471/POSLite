@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-class HomeController
+class GuestMiddleware implements Middleware
 {
-    public function index(Request $request): void
+    public function handle($request, $next)
     {
         if (!empty($_SESSION["auth"]["user_id"])) {
             redirect("/dashboard");
         }
 
-        redirect("/login");
+        return $next();
     }
 }

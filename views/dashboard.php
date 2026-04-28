@@ -1,4 +1,1 @@
-<h1>Dashboard</h1>
-
-<p>Welcome <?= $username ?></p>
-<p>Role: <?= $role ?></p>
+<?php require BASE_PATH . "/views/dashboard/index.php"; ?>

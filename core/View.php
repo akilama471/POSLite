@@ -1,17 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 class View
 {
-    public static function make($view, $data = [], $layout = "layout")
+    public static function make(string $view, array $data = [], string $layout = "layout"): void
     {
-        $viewPath = "../views/{$view}.php";
-        $layoutPath = "../views/layout/{$layout}.php";
+        $viewPath = BASE_PATH . "/views/{$view}.php";
+        $layoutPath = BASE_PATH . "/views/layout/{$layout}.php";
 
-        if (!file_exists($viewPath)) {
-            die("View not found: {$view}");
+        if (!is_file($viewPath)) {
+            throw new RuntimeException("View not found: {$view}");
         }
 
-        extract($data);
+        extract($data, EXTR_SKIP);
 
         ob_start();
         require $viewPath;
