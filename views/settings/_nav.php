@@ -18,6 +18,12 @@
         <?php if (can("p_68")): ?>
             <a class="nav-link <?= $currentPath === "/settings/user-privileges" ? "active" : "" ?>" href="/settings/user-privileges">User Function Mapping</a>
         <?php endif; ?>
+        <?php if (can("p_70")): ?>
+            <a class="nav-link <?= $currentPath === "/settings/shops/create" ? "active" : "" ?>" href="/settings/shops/create">Add Shop</a>
+        <?php endif; ?>
+        <?php if (can("p_71")): ?>
+            <a class="nav-link <?= $currentPath === "/settings/shops" ? "active" : "" ?>" href="/settings/shops">Shop List</a>
+        <?php endif; ?>
         <a class="nav-link <?= $currentPath === "/settings/profile" ? "active" : "" ?>" href="/settings/profile">My Account</a>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>

@@ -6,6 +6,17 @@ class Privilege extends Model
 {
     protected $table = "sys_privilege";
 
+    public function findByPrivilegeId(int $id): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM sys_privilege WHERE privilegeid = :id LIMIT 1",
+        );
+        $stmt->execute(["id" => $id]);
+
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
     public function allOrdered(): array
     {
         $stmt = $this->db->query(

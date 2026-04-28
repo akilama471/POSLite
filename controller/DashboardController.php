@@ -32,6 +32,7 @@ class DashboardController
             ["key" => "p_2", "label" => "Point Of Sale", "href" => "#", "migrated" => false],
             ["key" => "p_3", "label" => "Repair Job", "href" => "#", "migrated" => false],
             ["key" => "p_14", "label" => "Shop Items", "href" => "#", "migrated" => false],
+            ["key" => "p_18", "label" => "Manage Category", "href" => "/categories", "migrated" => true],
             ["key" => "p_24", "label" => "Suppliers", "href" => "#", "migrated" => false],
             ["key" => "p_30", "label" => "Bill Details", "href" => "#", "migrated" => false],
             ["key" => "p_35", "label" => "Customers", "href" => "#", "migrated" => false],

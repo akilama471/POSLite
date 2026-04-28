@@ -33,6 +33,14 @@ class SettingsController
                 ],
             ],
             [
+                "title" => "Shop Management",
+                "permission" => "p_69",
+                "items" => [
+                    ["label" => "Add Shop", "href" => "/settings/shops/create", "permission" => "p_70"],
+                    ["label" => "Shop List", "href" => "/settings/shops", "permission" => "p_71"],
+                ],
+            ],
+            [
                 "title" => "My Account",
                 "permission" => null,
                 "items" => [

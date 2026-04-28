@@ -34,7 +34,11 @@
                                     <label for="privilege_<?= (int) $privilege["privilegeid"] ?>">Group Name</label>
                                     <input class="input" id="privilege_<?= (int) $privilege["privilegeid"] ?>" name="name" value="<?= htmlspecialchars((string) $privilege["privilegename"], ENT_QUOTES, "UTF-8") ?>" required>
                                 </div>
-                                <button class="btn btn-primary" type="submit">Rename Group</button>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button class="btn btn-primary" type="submit">Rename Group</button>
+                                    <a class="btn" style="background:#eef3f7; color:#163041;" href="/settings/privileges/<?= (int) $privilege["privilegeid"] ?>/functions">Edit Functions</a>
+                                    <a class="btn" style="background:#eef3f7; color:#163041;" href="/settings/privileges/<?= (int) $privilege["privilegeid"] ?>/reports">Edit Reports</a>
+                                </div>
                             </form>
                         <?php endforeach; ?>
                     </div>
