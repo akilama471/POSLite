@@ -63,7 +63,7 @@ class DashboardController
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
-            ["key" => "p_2", "label" => "Point Of Sale", "href" => "#", "migrated" => false],
+            ["key" => "p_2", "label" => "Point Of Sale", "href" => "/pos", "migrated" => true],
             ["key" => "p_3", "label" => "Repair Job", "href" => "#", "migrated" => false],
             ["key" => "p_14", "label" => "Shop Items", "href" => $itemHref, "migrated" => $itemHref !== "#"],
             ["key" => "p_18", "label" => "Manage Category", "href" => "/categories", "migrated" => true],

@@ -249,6 +249,30 @@ Integrated with:
 - dashboard cashier tile
 - catalog navigation cashier link
 
+#### POS Workspace
+Migrated from:
+- `old-code/app/pointofsale.php`
+- `old-code/app/pointofsale_new.php`
+
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/views/pos/index.php`
+
+Current scope:
+- customer lookup and selection
+- item lookup by name/code
+- cart staging in session
+- line update/remove
+- payment draft totals
+
+Deferred intentionally:
+- final checkout transaction
+- stock mutation
+- bill number generation
+- customer ledger writes
+- cash-book writes
+- printing
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -306,14 +330,15 @@ Integrated with:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. POS screen migration onto the new helper endpoints
+1. POS checkout transaction migration
 2. Broader reports module conversion
 3. GRN/purchase flow migration
 4. cashier transfer / advanced drawer flows
 
 Recommended legacy files to inspect next:
-- `old-code/app/pointofsale.php`
 - `old-code/app/pointofsale_new.php`
+- `old-code/app/printmybill.php`
+- `old-code/app/c_pos_temp_*.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
