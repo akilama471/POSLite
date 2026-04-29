@@ -229,8 +229,13 @@ $formatMoney = static function (mixed $value): string {
                 </form>
 
                 <p class="muted" style="margin:16px 0 0;">
-                    Final checkout, stock mutation, bill-number generation, ledger writes, and printing are intentionally deferred to the next POS migration pass because the legacy flow is not transaction-safe.
+                    This draft now supports transaction-safe checkout. Printer/browser receipt automation is still pending.
                 </p>
+
+                <form method="POST" action="/pos/checkout" style="margin-top:16px;">
+                    <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                    <button class="btn btn-primary" type="submit" <?= $lines === [] ? "disabled" : "" ?>>Finish Bill</button>
+                </form>
             </section>
         </main>
     </div>

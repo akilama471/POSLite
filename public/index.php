@@ -23,6 +23,8 @@ $router->post("/pos/items/{id}", "PosController@updateLine", ["auth", "permissio
 $router->post("/pos/items/{id}/delete", "PosController@removeLine", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/reset", "PosController@resetCart", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/payment", "PosController@updatePayment", ["auth", "permission:p_2", "cashier"]);
+$router->post("/pos/checkout", "PosController@checkout", ["auth", "permission:p_2", "cashier"]);
+$router->get("/pos/receipts/{billnumber}", "PosController@receipt", ["auth", "permission:p_2", "cashier"]);
 $router->get("/settings", "SettingsController@index", ["auth", "permission:p_63"]);
 $router->get("/settings/users", "UserManagementController@index", ["auth", "permission:p_65"]);
 $router->get("/settings/users/create", "UserManagementController@create", ["auth", "permission:p_64"]);

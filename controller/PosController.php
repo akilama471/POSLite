@@ -186,6 +186,89 @@ class PosController
         redirect("/pos");
     }
 
+    public function checkout(Request $request): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
+            redirect("/pos");
+        }
+
+        $auth = auth_user() ?? [];
+        $cart = $this->cart();
+
+        if (($cart["lines"] ?? []) === []) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Add at least one item before finishing the bill."];
+            redirect("/pos");
+        }
+
+        $validation = $this->validateCheckout($cart);
+        if ($validation !== null) {
+            $_SESSION["flash"] = ["type" => "error", "message" => $validation];
+            redirect("/pos");
+        }
+
+        $shopModel = new Shop();
+        $shop = $shopModel->findByShopId((int) ($auth["shop_id"] ?? 0));
+
+        if ($shop === null) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Shop configuration not found for POS checkout."];
+            redirect("/pos");
+        }
+
+        $saleModel = new PosSale();
+
+        try {
+            $billNumber = $saleModel->checkout([
+                "shop_id" => (int) ($auth["shop_id"] ?? 0),
+                "user_id" => (int) ($auth["user_id"] ?? 0),
+                "seller_name" => (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+                "shop" => $shop,
+                "customer" => $cart["customer"],
+                "lines" => $cart["lines"],
+                "payment" => $cart["payment"],
+                "summary" => $cart["summary"],
+            ]);
+        } catch (Throwable $exception) {
+            $_SESSION["flash"] = ["type" => "error", "message" => $exception->getMessage()];
+            redirect("/pos");
+        }
+
+        unset($_SESSION["pos_cart"]);
+        redirect("/pos/receipts/" . $billNumber);
+    }
+
+    public function receipt(Request $request, string $billNumber): void
+    {
+        $saleModel = new PosSale();
+        $shopModel = new Shop();
+        $customerModel = new Customer();
+        $userModel = new User();
+        $receipt = $saleModel->receipt($billNumber);
+
+        if ($receipt === null) {
+            http_response_code(404);
+            View::make("errors/404", ["title" => "Receipt Not Found"]);
+            return;
+        }
+
+        $bill = $receipt["bill"];
+        $customer = (int) ($bill["customer_id"] ?? 0) > 0
+            ? $customerModel->findById((int) $bill["customer_id"])
+            : null;
+        $cashier = $userModel->findById((int) ($bill["operator"] ?? 0));
+        $shop = $shopModel->findByShopId((int) ($bill["billed_shop"] ?? 0));
+
+        View::make("pos/receipt", [
+            "title" => "POS Receipt",
+            "auth" => auth_user(),
+            "bill" => $bill,
+            "lines" => $receipt["lines"],
+            "customer" => $customer,
+            "cashier" => $cashier,
+            "shop" => $shop,
+        ]);
+    }
+
     private function cart(): array
     {
         $cart = $_SESSION["pos_cart"] ?? null;
@@ -230,6 +313,32 @@ class PosController
             "paid" => $cash + $card,
             "balance" => ($cash + $card) - $total,
         ];
+    }
+
+    private function validateCheckout(array $cart): ?string
+    {
+        $payment = $cart["payment"] ?? [];
+        $summary = $cart["summary"] ?? ["total" => 0, "paid" => 0, "balance" => 0];
+        $method = (string) ($payment["method"] ?? "cash");
+        $customerId = (int) (($cart["customer"]["id"] ?? 0));
+
+        if ($method === "cash" && (float) ($payment["cash_amount"] ?? 0) <= 0) {
+            return "Cash amount is required.";
+        }
+
+        if ($method === "card" && ((float) ($payment["card_amount"] ?? 0) <= 0 || trim((string) ($payment["card_number"] ?? "")) === "")) {
+            return "Card amount and card number are required.";
+        }
+
+        if ($method === "split" && (((float) ($payment["cash_amount"] ?? 0) + (float) ($payment["card_amount"] ?? 0)) <= 0 || trim((string) ($payment["card_number"] ?? "")) === "")) {
+            return "Split payment requires payment amounts and a card number.";
+        }
+
+        if ($customerId === 0 && (float) ($summary["paid"] ?? 0) < (float) ($summary["total"] ?? 0)) {
+            return "Cash customer bills must be fully paid before checkout.";
+        }
+
+        return null;
     }
 
     private function buildCartLine(array $lookup, int $qty, float $salePrice, float $discount, string $warranty): array

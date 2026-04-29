@@ -264,14 +264,17 @@ Current scope:
 - cart staging in session
 - line update/remove
 - payment draft totals
-
-Deferred intentionally:
-- final checkout transaction
+- transaction-safe checkout
 - stock mutation
-- bill number generation
+- bill header + line writes
 - customer ledger writes
 - cash-book writes
-- printing
+- receipt confirmation page
+
+Deferred intentionally:
+- browser/printer print automation
+- barcode/warranty print actions
+- temp slot compatibility features
 
 ## Current Route Coverage
 
@@ -330,7 +333,7 @@ Deferred intentionally:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. POS checkout transaction migration
+1. POS printing and legacy slot compatibility
 2. Broader reports module conversion
 3. GRN/purchase flow migration
 4. cashier transfer / advanced drawer flows
@@ -338,6 +341,7 @@ Continue Step 3 with remaining master data domains in this order:
 Recommended legacy files to inspect next:
 - `old-code/app/pointofsale_new.php`
 - `old-code/app/printmybill.php`
+- `old-code/app/barcodeprint.php`
 - `old-code/app/c_pos_temp_*.php`
 
 ## Notes For Tomorrow
