@@ -31,7 +31,7 @@ $selectedSupplierId = (int) ($selectedSupplier["supplierid"] ?? 0);
 
             <section class="card" style="margin-bottom:18px;">
                 <p class="section-copy" style="margin:0;">
-                    This migration records supplier payments into the legacy finance tables and keeps the write flow in-app. Cashier duty-on enforcement and bill-print handoff are still queued for later cashier/report migration.
+                    This migration records supplier payments into the legacy finance tables and keeps the write flow in-app. Cashier duty-on enforcement is now active. Bill-print handoff is still queued for a later reporting/printing slice.
                 </p>
             </section>
 

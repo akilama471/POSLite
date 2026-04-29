@@ -233,6 +233,22 @@ Implemented in:
 - `new-code/views/catalog/colors/index.php`
 - `new-code/views/catalog/alerts/index.php`
 
+#### Cashier Duty
+Migrated from:
+- `old-code/app/cashier_onoff.php`
+- `old-code/app/c_cashier.php`
+
+Implemented in:
+- `new-code/controller/CashierController.php`
+- `new-code/Models/Cashier.php`
+- `new-code/middleware/CashierActiveMiddleware.php`
+- `new-code/views/cashier/index.php`
+
+Integrated with:
+- payment entry routes now require active cashier duty
+- dashboard cashier tile
+- catalog navigation cashier link
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -290,14 +306,14 @@ Implemented in:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. Cashier duty-on/off integration for payment enforcement
-2. POS screen migration onto the new helper endpoints
-3. Broader reports module conversion
-4. GRN/purchase flow migration
+1. POS screen migration onto the new helper endpoints
+2. Broader reports module conversion
+3. GRN/purchase flow migration
+4. cashier transfer / advanced drawer flows
 
 Recommended legacy files to inspect next:
-- `old-code/app/cashier_onoff.php`
 - `old-code/app/pointofsale.php`
+- `old-code/app/pointofsale_new.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

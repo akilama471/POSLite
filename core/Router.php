@@ -91,6 +91,7 @@ class Router
         $map = [
             "auth" => AuthMiddleware::class,
             "guest" => GuestMiddleware::class,
+            "cashier" => CashierActiveMiddleware::class,
         ];
 
         if (str_starts_with($name, "permission:")) {

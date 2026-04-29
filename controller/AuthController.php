@@ -54,8 +54,11 @@ class AuthController
             "shop_phone" => $shop["shop_tel_1"] ?? "",
             "privilege_id" => (int) ($user["privilageid"] ?? 0),
             "permissions" => $permissions,
+            "cashier_on" => false,
+            "cashier_slot_id" => null,
         ];
 
+        sync_cashier_session(false, null);
         redirect("/dashboard");
     }
 

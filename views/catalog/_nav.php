@@ -60,6 +60,9 @@
         <?php if (can("p_52")): ?>
             <a class="nav-link <?= $currentPath === "/item-alerts" ? "active" : "" ?>" href="/item-alerts">Item Alert Config</a>
         <?php endif; ?>
+        <?php if (can("p_59") || can("p_58")): ?>
+            <a class="nav-link <?= $currentPath === "/cashier" ? "active" : "" ?>" href="/cashier">Cashier Duty</a>
+        <?php endif; ?>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>
 </aside>

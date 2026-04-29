@@ -115,3 +115,16 @@ function can(string $permission): bool
 
     return (bool) ($auth["permissions"][$permission] ?? false);
 }
+
+function sync_cashier_session(bool $isActive, ?int $slotId): void
+{
+    $_SESSION["cashier"] = [
+        "active" => $isActive,
+        "slot_id" => $slotId,
+    ];
+
+    if (isset($_SESSION["auth"]) && is_array($_SESSION["auth"])) {
+        $_SESSION["auth"]["cashier_on"] = $isActive;
+        $_SESSION["auth"]["cashier_slot_id"] = $slotId;
+    }
+}

@@ -11,6 +11,9 @@ $router->get("/login", "AuthController@showLoginForm", ["guest"]);
 $router->post("/login", "AuthController@login", ["guest"]);
 $router->post("/logout", "AuthController@logout", ["auth"]);
 $router->get("/dashboard", "DashboardController@index", ["auth"]);
+$router->get("/cashier", "CashierController@index", ["auth"]);
+$router->post("/cashier/start", "CashierController@start", ["auth"]);
+$router->post("/cashier/close", "CashierController@close", ["auth"]);
 $router->get("/settings", "SettingsController@index", ["auth", "permission:p_63"]);
 $router->get("/settings/users", "UserManagementController@index", ["auth", "permission:p_65"]);
 $router->get("/settings/users/create", "UserManagementController@create", ["auth", "permission:p_64"]);
@@ -66,10 +69,10 @@ $router->post("/suppliers/{id}", "SupplierController@update", ["auth", "permissi
 $router->get("/supplier-accounts", "AccountBalanceController@suppliers", ["auth", "permission:p_27"]);
 $router->get("/supplier-credit-balances", "AccountBalanceController@supplierCashCredits", ["auth", "permission:p_28"]);
 $router->post("/supplier-credit-balances/refresh", "AccountBalanceController@refreshSupplierCashCredits", ["auth", "permission:p_28"]);
-$router->get("/supplier-payments", "PaymentController@supplierForm", ["auth", "permission:p_29"]);
+$router->get("/supplier-payments", "PaymentController@supplierForm", ["auth", "permission:p_29", "cashier"]);
 $router->get("/reports/supplier-payments", "FinanceReportController@supplierPayments", ["auth", "permission:r_15"]);
-$router->get("/api/supplier-payments/details", "PaymentController@supplierDetails", ["auth", "permission:p_29"]);
-$router->post("/supplier-payments", "PaymentController@storeSupplierPayment", ["auth", "permission:p_29"]);
+$router->get("/api/supplier-payments/details", "PaymentController@supplierDetails", ["auth", "permission:p_29", "cashier"]);
+$router->post("/supplier-payments", "PaymentController@storeSupplierPayment", ["auth", "permission:p_29", "cashier"]);
 $router->get("/customers", "CustomerController@index", ["auth", "permission:p_37"]);
 $router->get("/customers/create", "CustomerController@create", ["auth", "permission:p_36"]);
 $router->post("/customers", "CustomerController@store", ["auth", "permission:p_36"]);
@@ -79,9 +82,9 @@ $router->post("/customers/{id}/status", "CustomerController@updateStatus", ["aut
 $router->get("/customer-accounts", "AccountBalanceController@customers", ["auth", "permission:p_39"]);
 $router->get("/customer-credit-balances", "AccountBalanceController@customerCashCredits", ["auth", "permission:p_40"]);
 $router->post("/customer-credit-balances/refresh", "AccountBalanceController@refreshCustomerCashCredits", ["auth", "permission:p_40"]);
-$router->get("/customer-payments", "PaymentController@customerForm", ["auth", "permission:p_41"]);
+$router->get("/customer-payments", "PaymentController@customerForm", ["auth", "permission:p_41", "cashier"]);
 $router->get("/reports/customer-payments", "FinanceReportController@customerPayments", ["auth", "permission:r_19"]);
-$router->get("/api/customer-payments/details", "PaymentController@customerDetails", ["auth", "permission:p_41"]);
-$router->post("/customer-payments", "PaymentController@storeCustomerPayment", ["auth", "permission:p_41"]);
+$router->get("/api/customer-payments/details", "PaymentController@customerDetails", ["auth", "permission:p_41", "cashier"]);
+$router->post("/customer-payments", "PaymentController@storeCustomerPayment", ["auth", "permission:p_41", "cashier"]);
 
 $router->dispatch($_SERVER["REQUEST_URI"], $_SERVER["REQUEST_METHOD"]);

@@ -57,6 +57,9 @@ class DashboardController
         $reportsHref = ($permissions["r_15"] ?? false)
             ? "/reports/supplier-payments"
             : (($permissions["r_19"] ?? false) ? "/reports/customer-payments" : "#");
+        $cashierHref = (($permissions["p_59"] ?? false) || ($permissions["p_58"] ?? false))
+            ? "/cashier"
+            : "#";
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
@@ -69,7 +72,7 @@ class DashboardController
             ["key" => "p_35", "label" => "Customers", "href" => $customerHref, "migrated" => $customerHref !== "#"],
             ["key" => "p_42", "label" => "Purchases", "href" => "#", "migrated" => false],
             ["key" => "p_47", "label" => "Stocks", "href" => "#", "migrated" => false],
-            ["key" => "p_56", "label" => "Cashier", "href" => "#", "migrated" => false],
+            ["key" => "p_56", "label" => "Cashier", "href" => $cashierHref, "migrated" => $cashierHref !== "#"],
             ["key" => "p_62", "label" => "Reports", "href" => $reportsHref, "migrated" => $reportsHref !== "#"],
             ["key" => "p_77", "label" => "SMS Broadcast", "href" => "#", "migrated" => false],
             ["key" => "p_63", "label" => "System Settings", "href" => "/settings", "migrated" => true],
