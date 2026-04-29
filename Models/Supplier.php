@@ -74,4 +74,13 @@ class Supplier extends Model
 
         return $stmt->fetchAll();
     }
+
+    public function allWithCashCreditBalances(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM shop_supplier ORDER BY supplierid ASC",
+        );
+
+        return $stmt->fetchAll();
+    }
 }

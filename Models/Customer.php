@@ -136,4 +136,16 @@ class Customer extends Model
 
         return $stmt->fetchAll();
     }
+
+    public function allWithCashCreditBalances(): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM shop_customer
+             WHERE recordid > 0
+             ORDER BY recordid ASC",
+        );
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
 }

@@ -27,8 +27,14 @@
         <?php if (can("p_27")): ?>
             <a class="nav-link <?= $currentPath === "/supplier-accounts" ? "active" : "" ?>" href="/supplier-accounts">Supplier Accounts</a>
         <?php endif; ?>
+        <?php if (can("p_28")): ?>
+            <a class="nav-link <?= $currentPath === "/supplier-credit-balances" ? "active" : "" ?>" href="/supplier-credit-balances">Supplier Credit Balance</a>
+        <?php endif; ?>
         <?php if (can("p_29")): ?>
             <a class="nav-link <?= $currentPath === "/supplier-payments" ? "active" : "" ?>" href="/supplier-payments">Supplier Payment</a>
+        <?php endif; ?>
+        <?php if (can("r_15")): ?>
+            <a class="nav-link <?= $currentPath === "/reports/supplier-payments" ? "active" : "" ?>" href="/reports/supplier-payments">Supplier Payment Report</a>
         <?php endif; ?>
         <?php if (can("p_36")): ?>
             <a class="nav-link <?= $currentPath === "/customers/create" ? "active" : "" ?>" href="/customers/create">Add Customer</a>
@@ -39,8 +45,14 @@
         <?php if (can("p_39")): ?>
             <a class="nav-link <?= $currentPath === "/customer-accounts" ? "active" : "" ?>" href="/customer-accounts">Customer Accounts</a>
         <?php endif; ?>
+        <?php if (can("p_40")): ?>
+            <a class="nav-link <?= $currentPath === "/customer-credit-balances" ? "active" : "" ?>" href="/customer-credit-balances">Customer Credit Balance</a>
+        <?php endif; ?>
         <?php if (can("p_41")): ?>
             <a class="nav-link <?= $currentPath === "/customer-payments" ? "active" : "" ?>" href="/customer-payments">Customer Payment</a>
+        <?php endif; ?>
+        <?php if (can("r_19")): ?>
+            <a class="nav-link <?= $currentPath === "/reports/customer-payments" ? "active" : "" ?>" href="/reports/customer-payments">Customer Payment Report</a>
         <?php endif; ?>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>

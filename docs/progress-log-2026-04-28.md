@@ -186,6 +186,37 @@ Implemented in:
 - `new-code/views/finance/suppliers/form.php`
 - `new-code/views/finance/customers/form.php`
 
+#### Cash Credit Balance Pages
+Migrated from:
+- `old-code/app/supplier_chashcredit_list.php`
+- `old-code/app/customer_chashcredit_list.php`
+- `old-code/app/c_supp_cashcredit_list.php`
+- `old-code/app/c_customer_cashcredit_list.php`
+- `old-code/app/c_supp_cashcredit_upd.php`
+- `old-code/app/c_customer_cashcredit_upd.php`
+
+Implemented in:
+- `new-code/controller/AccountBalanceController.php`
+- `new-code/Models/Finance.php`
+- `new-code/Models/Supplier.php`
+- `new-code/Models/Customer.php`
+- `new-code/views/finance/credits/suppliers.php`
+- `new-code/views/finance/credits/customers.php`
+
+#### Finance Payment Reports
+Migrated from:
+- `old-code/app/reports/rpt_supply_payment.php`
+- `old-code/app/reports/rpt_customer_payment.php`
+- `old-code/app/reports/c_supply.php`
+- `old-code/app/reports/c_customer.php`
+
+Implemented in:
+- `new-code/controller/FinanceReportController.php`
+- `new-code/Models/Finance.php`
+- `new-code/Models/Company.php`
+- `new-code/views/reports/finance/supplier_payments.php`
+- `new-code/views/reports/finance/customer_payments.php`
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -222,13 +253,17 @@ Implemented in:
 - `/suppliers/create`
 - `/suppliers/{id}/edit`
 - `/supplier-accounts`
+- `/supplier-credit-balances`
 - `/supplier-payments`
+- `/reports/supplier-payments`
 - `/api/supplier-payments/details`
 - `/customers`
 - `/customers/create`
 - `/customers/{id}/edit`
 - `/customer-accounts`
+- `/customer-credit-balances`
 - `/customer-payments`
+- `/reports/customer-payments`
 - `/api/customer-payments/details`
 
 ## Validation Completed
@@ -238,13 +273,13 @@ Implemented in:
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
 1. Remaining low-risk stock config pages
-2. Finance credit-balance views and payment reports
-3. Cashier duty-on/off integration for payment enforcement
-4. POS screen migration onto the new helper endpoints
+2. Cashier duty-on/off integration for payment enforcement
+3. POS screen migration onto the new helper endpoints
+4. Broader reports module conversion
 
 Recommended legacy files to inspect next:
-- `old-code/app/supplier_chashcredit_list.php`
-- `old-code/app/customer_chashcredit_list.php`
+- `old-code/app/stock_alert.php`
+- `old-code/app/manage_color.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

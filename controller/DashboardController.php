@@ -36,16 +36,23 @@ class DashboardController
             ? "/suppliers"
             : (($permissions["p_27"] ?? false)
                 ? "/supplier-accounts"
-                : (($permissions["p_29"] ?? false)
+                : (($permissions["p_28"] ?? false)
+                    ? "/supplier-credit-balances"
+                    : (($permissions["p_29"] ?? false)
                     ? "/supplier-payments"
-                    : (($permissions["p_25"] ?? false) ? "/suppliers/create" : "#")));
+                    : (($permissions["p_25"] ?? false) ? "/suppliers/create" : "#"))));
         $customerHref = ($permissions["p_37"] ?? false)
             ? "/customers"
             : (($permissions["p_39"] ?? false)
                 ? "/customer-accounts"
-                : (($permissions["p_41"] ?? false)
+                : (($permissions["p_40"] ?? false)
+                    ? "/customer-credit-balances"
+                    : (($permissions["p_41"] ?? false)
                     ? "/customer-payments"
-                    : (($permissions["p_36"] ?? false) ? "/customers/create" : "#")));
+                    : (($permissions["p_36"] ?? false) ? "/customers/create" : "#"))));
+        $reportsHref = ($permissions["r_15"] ?? false)
+            ? "/reports/supplier-payments"
+            : (($permissions["r_19"] ?? false) ? "/reports/customer-payments" : "#");
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
@@ -59,7 +66,7 @@ class DashboardController
             ["key" => "p_42", "label" => "Purchases", "href" => "#", "migrated" => false],
             ["key" => "p_47", "label" => "Stocks", "href" => "#", "migrated" => false],
             ["key" => "p_56", "label" => "Cashier", "href" => "#", "migrated" => false],
-            ["key" => "p_62", "label" => "Reports", "href" => "#", "migrated" => false],
+            ["key" => "p_62", "label" => "Reports", "href" => $reportsHref, "migrated" => $reportsHref !== "#"],
             ["key" => "p_77", "label" => "SMS Broadcast", "href" => "#", "migrated" => false],
             ["key" => "p_63", "label" => "System Settings", "href" => "/settings", "migrated" => true],
         ];

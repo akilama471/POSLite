@@ -6,6 +6,16 @@ class Finance extends Model
 {
     protected $table = "cash_book";
 
+    private const SUPPLIER_OP_TYPES = [
+        1 => "GRN Pay - cash",
+        2 => "GRN Pay - cheque",
+        3 => "GRN Pay - Remain",
+        4 => "Repay from supply pay - cash",
+        5 => "Repay from supply pay - cheque",
+        6 => "Repay from supply pay - cash credit",
+        7 => "Billed Amount",
+    ];
+
     public function supplierCredits(int $supplierId): array
     {
         $stmt = $this->db->prepare(
@@ -15,6 +25,50 @@ class Finance extends Model
              ORDER BY logid DESC",
         );
         $stmt->execute(["supplier" => $supplierId]);
+
+        return $stmt->fetchAll();
+    }
+
+    public function supplierPaymentHistory(int $supplierId, string $fromDate, string $toDate): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM account_supplier
+             WHERE date(recordtime) >= :from_date
+               AND date(recordtime) <= :to_date
+               AND supplier = :supplier
+             ORDER BY recordtime ASC, logid ASC",
+        );
+        $stmt->execute([
+            "from_date" => $fromDate,
+            "to_date" => $toDate,
+            "supplier" => $supplierId,
+        ]);
+
+        $rows = $stmt->fetchAll();
+
+        foreach ($rows as &$row) {
+            $row["op_type_label"] = self::SUPPLIER_OP_TYPES[(int) ($row["op_type"] ?? 0)] ?? "Error";
+        }
+
+        return $rows;
+    }
+
+    public function customerPaymentHistory(int $customerId, string $fromDate, string $toDate): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM account_customer
+             WHERE date(recordtime) >= :from_date
+               AND date(recordtime) <= :to_date
+               AND customer = :customer
+             ORDER BY recordtime ASC, logid ASC",
+        );
+        $stmt->execute([
+            "from_date" => $fromDate,
+            "to_date" => $toDate,
+            "customer" => $customerId,
+        ]);
 
         return $stmt->fetchAll();
     }
@@ -30,6 +84,64 @@ class Finance extends Model
         $stmt->execute(["customer" => $customerId]);
 
         return $stmt->fetchAll();
+    }
+
+    public function refreshSupplierCashCreditBalances(): void
+    {
+        $suppliers = $this->db->query(
+            "SELECT supplierid FROM shop_supplier WHERE supplier_status = 1 ORDER BY supplierid ASC",
+        )->fetchAll();
+
+        $balanceStmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(amount), 0)
+             FROM account_cashcredit
+             WHERE supplier = :supplier
+               AND status = 1",
+        );
+        $updateStmt = $this->db->prepare(
+            "UPDATE shop_supplier
+             SET cash_credit_balance = :balance
+             WHERE supplierid = :supplier",
+        );
+
+        foreach ($suppliers as $supplier) {
+            $supplierId = (int) $supplier["supplierid"];
+            $balanceStmt->execute(["supplier" => $supplierId]);
+            $balance = (float) $balanceStmt->fetchColumn();
+            $updateStmt->execute([
+                "balance" => $balance,
+                "supplier" => $supplierId,
+            ]);
+        }
+    }
+
+    public function refreshCustomerCashCreditBalances(): void
+    {
+        $customers = $this->db->query(
+            "SELECT recordid FROM shop_customer WHERE recordid > 0 ORDER BY recordid ASC",
+        )->fetchAll();
+
+        $balanceStmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(amount), 0)
+             FROM account_cashcredit_customer
+             WHERE customer = :customer
+               AND status = 1",
+        );
+        $updateStmt = $this->db->prepare(
+            "UPDATE shop_customer
+             SET cash_credit_balance = :balance
+             WHERE recordid = :customer",
+        );
+
+        foreach ($customers as $customer) {
+            $customerId = (int) $customer["recordid"];
+            $balanceStmt->execute(["customer" => $customerId]);
+            $balance = (float) $balanceStmt->fetchColumn();
+            $updateStmt->execute([
+                "balance" => $balance,
+                "customer" => $customerId,
+            ]);
+        }
     }
 
     public function createSupplierPayment(array $payload): array

@@ -56,7 +56,10 @@ $router->post("/suppliers", "SupplierController@store", ["auth", "permission:p_2
 $router->get("/suppliers/{id}/edit", "SupplierController@edit", ["auth", "permission:p_26"]);
 $router->post("/suppliers/{id}", "SupplierController@update", ["auth", "permission:p_26"]);
 $router->get("/supplier-accounts", "AccountBalanceController@suppliers", ["auth", "permission:p_27"]);
+$router->get("/supplier-credit-balances", "AccountBalanceController@supplierCashCredits", ["auth", "permission:p_28"]);
+$router->post("/supplier-credit-balances/refresh", "AccountBalanceController@refreshSupplierCashCredits", ["auth", "permission:p_28"]);
 $router->get("/supplier-payments", "PaymentController@supplierForm", ["auth", "permission:p_29"]);
+$router->get("/reports/supplier-payments", "FinanceReportController@supplierPayments", ["auth", "permission:r_15"]);
 $router->get("/api/supplier-payments/details", "PaymentController@supplierDetails", ["auth", "permission:p_29"]);
 $router->post("/supplier-payments", "PaymentController@storeSupplierPayment", ["auth", "permission:p_29"]);
 $router->get("/customers", "CustomerController@index", ["auth", "permission:p_37"]);
@@ -66,7 +69,10 @@ $router->get("/customers/{id}/edit", "CustomerController@edit", ["auth", "permis
 $router->post("/customers/{id}", "CustomerController@update", ["auth", "permission:p_37"]);
 $router->post("/customers/{id}/status", "CustomerController@updateStatus", ["auth", "permission:p_37"]);
 $router->get("/customer-accounts", "AccountBalanceController@customers", ["auth", "permission:p_39"]);
+$router->get("/customer-credit-balances", "AccountBalanceController@customerCashCredits", ["auth", "permission:p_40"]);
+$router->post("/customer-credit-balances/refresh", "AccountBalanceController@refreshCustomerCashCredits", ["auth", "permission:p_40"]);
 $router->get("/customer-payments", "PaymentController@customerForm", ["auth", "permission:p_41"]);
+$router->get("/reports/customer-payments", "FinanceReportController@customerPayments", ["auth", "permission:r_19"]);
 $router->get("/api/customer-payments/details", "PaymentController@customerDetails", ["auth", "permission:p_41"]);
 $router->post("/customer-payments", "PaymentController@storeCustomerPayment", ["auth", "permission:p_41"]);
 
