@@ -37,6 +37,10 @@ $router->get("/categories", "ProductCategoryController@index", ["auth", "permiss
 $router->post("/categories", "ProductCategoryController@store", ["auth", "permission:p_18"]);
 $router->post("/categories/{id}", "ProductCategoryController@update", ["auth", "permission:p_18"]);
 $router->post("/categories/{id}/delete", "ProductCategoryController@destroy", ["auth", "permission:p_18"]);
+$router->get("/item-colors", "ItemColorController@index", ["auth", "permission:p_19"]);
+$router->post("/item-colors", "ItemColorController@store", ["auth", "permission:p_19"]);
+$router->post("/item-colors/{id}", "ItemColorController@update", ["auth", "permission:p_19"]);
+$router->post("/item-colors/{id}/delete", "ItemColorController@destroy", ["auth", "permission:p_19"]);
 $router->get("/operators", "RechargeOperatorController@index", ["auth", "permission:p_22"]);
 $router->post("/operators", "RechargeOperatorController@store", ["auth", "permission:p_22"]);
 $router->post("/operators/{id}", "RechargeOperatorController@update", ["auth", "permission:p_22"]);
@@ -49,6 +53,10 @@ $router->get("/items/create", "ItemController@create", ["auth", "permission:p_15
 $router->post("/items", "ItemController@store", ["auth", "permission:p_15"]);
 $router->get("/items/{id}/edit", "ItemController@edit", ["auth", "permission:p_16"]);
 $router->post("/items/{id}", "ItemController@update", ["auth", "permission:p_16"]);
+$router->get("/item-alerts", "StockAlertController@index", ["auth", "permission:p_52"]);
+$router->post("/item-alerts", "StockAlertController@store", ["auth", "permission:p_52"]);
+$router->post("/item-alerts/{id}", "StockAlertController@update", ["auth", "permission:p_52"]);
+$router->post("/item-alerts/{id}/delete", "StockAlertController@destroy", ["auth", "permission:p_52"]);
 $router->get("/items/search", "StockSearchController@index", ["auth", "permission:p_17"]);
 $router->get("/suppliers", "SupplierController@index", ["auth", "permission:p_26"]);
 $router->get("/suppliers/create", "SupplierController@create", ["auth", "permission:p_25"]);

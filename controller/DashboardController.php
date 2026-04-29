@@ -31,7 +31,11 @@ class DashboardController
             ? "/items"
             : (($permissions["p_17"] ?? false)
                 ? "/items/search"
-                : (($permissions["p_15"] ?? false) ? "/items/create" : "#"));
+                : (($permissions["p_19"] ?? false)
+                    ? "/item-colors"
+                    : (($permissions["p_52"] ?? false)
+                        ? "/item-alerts"
+                        : (($permissions["p_15"] ?? false) ? "/items/create" : "#"))));
         $supplierHref = ($permissions["p_26"] ?? false)
             ? "/suppliers"
             : (($permissions["p_27"] ?? false)

@@ -217,6 +217,22 @@ Implemented in:
 - `new-code/views/reports/finance/supplier_payments.php`
 - `new-code/views/reports/finance/customer_payments.php`
 
+#### Stock Configuration
+Migrated from:
+- `old-code/app/manage_item_color.php`
+- `old-code/app/c_man_col_show.php`
+- `old-code/app/item_alert_config.php`
+- `old-code/app/c_itm_alert.php`
+- `old-code/app/c_itm_alert_view.php`
+
+Implemented in:
+- `new-code/controller/ItemColorController.php`
+- `new-code/controller/StockAlertController.php`
+- `new-code/Models/ItemColor.php`
+- `new-code/Models/StockAlert.php`
+- `new-code/views/catalog/colors/index.php`
+- `new-code/views/catalog/alerts/index.php`
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -246,6 +262,8 @@ Implemented in:
 - `/api/items/by-category`
 - `/items`
 - `/items/create`
+- `/item-colors`
+- `/item-alerts`
 - `/items/{id}/edit`
 - `/items/search`
 - `/categories`
@@ -272,14 +290,14 @@ Implemented in:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. Remaining low-risk stock config pages
-2. Cashier duty-on/off integration for payment enforcement
-3. POS screen migration onto the new helper endpoints
-4. Broader reports module conversion
+1. Cashier duty-on/off integration for payment enforcement
+2. POS screen migration onto the new helper endpoints
+3. Broader reports module conversion
+4. GRN/purchase flow migration
 
 Recommended legacy files to inspect next:
-- `old-code/app/stock_alert.php`
-- `old-code/app/manage_color.php`
+- `old-code/app/cashier_onoff.php`
+- `old-code/app/pointofsale.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

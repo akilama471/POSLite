@@ -15,6 +15,9 @@
         <?php if (can("p_18")): ?>
             <a class="nav-link <?= $currentPath === "/categories" ? "active" : "" ?>" href="/categories">Categories</a>
         <?php endif; ?>
+        <?php if (can("p_19")): ?>
+            <a class="nav-link <?= $currentPath === "/item-colors" ? "active" : "" ?>" href="/item-colors">Item Colors</a>
+        <?php endif; ?>
         <?php if (can("p_22")): ?>
             <a class="nav-link <?= $currentPath === "/operators" ? "active" : "" ?>" href="/operators">Manage Operators</a>
         <?php endif; ?>
@@ -53,6 +56,9 @@
         <?php endif; ?>
         <?php if (can("r_19")): ?>
             <a class="nav-link <?= $currentPath === "/reports/customer-payments" ? "active" : "" ?>" href="/reports/customer-payments">Customer Payment Report</a>
+        <?php endif; ?>
+        <?php if (can("p_52")): ?>
+            <a class="nav-link <?= $currentPath === "/item-alerts" ? "active" : "" ?>" href="/item-alerts">Item Alert Config</a>
         <?php endif; ?>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>
