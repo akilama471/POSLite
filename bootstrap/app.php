@@ -76,6 +76,14 @@ function redirect(string $path): void
     exit();
 }
 
+function json_response(mixed $data, int $status = 200): void
+{
+    http_response_code($status);
+    header("Content-Type: application/json; charset=UTF-8");
+    echo json_encode($data);
+    exit();
+}
+
 function csrf_token(): string
 {
     if (empty($_SESSION["_csrf_token"])) {

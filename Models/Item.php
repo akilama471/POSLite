@@ -27,6 +27,26 @@ class Item extends Model
         return $stmt->fetchAll();
     }
 
+    public function namesByCategoryName(string $categoryName): array
+    {
+        $categoryModel = new ProductCategory();
+        $category = $categoryModel->findByName($categoryName);
+
+        if ($category === null) {
+            return [];
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT item_name FROM prod_items WHERE item_cat = :item_cat ORDER BY item_name ASC",
+        );
+        $stmt->execute(["item_cat" => (int) $category["catid"]]);
+
+        return array_map(
+            static fn (array $row): string => (string) $row["item_name"],
+            $stmt->fetchAll(),
+        );
+    }
+
     public function searchDetailed(string $term = ""): array
     {
         $stmt = $this->db->prepare(
@@ -69,6 +89,17 @@ class Item extends Model
              LIMIT 1",
         );
         $stmt->execute(["item_id" => $itemId]);
+
+        $item = $stmt->fetch();
+        return $item ?: null;
+    }
+
+    public function findByName(string $name): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM prod_items WHERE item_name = :item_name LIMIT 1",
+        );
+        $stmt->execute(["item_name" => $name]);
 
         $item = $stmt->fetch();
         return $item ?: null;
@@ -166,6 +197,544 @@ class Item extends Model
             $this->db->rollBack();
             throw $exception;
         }
+    }
+
+    public function stockSearch(string $name = "", string $code = ""): array
+    {
+        if ($name !== "") {
+            $item = $this->findByName($name);
+
+            if ($item === null) {
+                return [];
+            }
+
+            return match ((int) $item["used_type"]) {
+                1 => [[
+                    "type" => "barcode",
+                    "title" => "Barcode Controlled Stock",
+                    "rows" => $this->barcodeStockByItem((int) $item["item_id"]),
+                ]],
+                2 => [[
+                    "type" => "imei",
+                    "title" => "IMEI Controlled Stock",
+                    "rows" => $this->imeiStockByItem((int) $item["item_id"]),
+                ]],
+                3 => [[
+                    "type" => "recharge",
+                    "title" => "Recharge Card Stock",
+                    "rows" => $this->rechargeStockByItem((int) $item["item_id"]),
+                ]],
+                default => [],
+            };
+        }
+
+        if ($code !== "") {
+            $barcodeRows = $this->barcodeStockByCode($code);
+            if ($barcodeRows !== []) {
+                return [[
+                    "type" => "barcode",
+                    "title" => "Barcode Match",
+                    "rows" => $barcodeRows,
+                ]];
+            }
+
+            $imeiRows = $this->imeiStockByCode($code);
+            if ($imeiRows !== []) {
+                return [[
+                    "type" => "imei",
+                    "title" => "IMEI Match",
+                    "rows" => $imeiRows,
+                ]];
+            }
+        }
+
+        return [];
+    }
+
+    public function posLookupByName(string $name, int $shopId): array
+    {
+        $item = $this->findByName($name);
+
+        if ($item === null) {
+            return $this->emptyPosResult("No Data Matched");
+        }
+
+        return match ((int) $item["used_type"]) {
+            1 => $this->barcodePosByItem($item, $shopId),
+            2 => $this->imeiPosByItem($item, $shopId),
+            3 => $this->rechargePosByItem($item, $shopId),
+            default => $this->emptyPosResult("No Data Matched"),
+        };
+    }
+
+    public function posLookupByCode(string $code, int $shopId): array
+    {
+        $barcode = $this->barcodePosByCode($code, $shopId);
+        if ($barcode !== null) {
+            return $barcode;
+        }
+
+        $imei = $this->imeiPosByCode($code, $shopId);
+        if ($imei !== null) {
+            return $imei;
+        }
+
+        return $this->emptyPosResult("No Data Matched", true);
+    }
+
+    private function barcodeStockByItem(int $itemId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT stock.item_name,
+                    stock.item_sell_price,
+                    stock.item_cost_price,
+                    stock.item_other_price,
+                    stock.supplier_id,
+                    supplier.supplier_name,
+                    stock.stock_current,
+                    stock.gen_refno,
+                    stock.grn_refno,
+                    shop.shop_info_name
+             FROM shop_stock_item AS stock
+             LEFT JOIN shop_supplier AS supplier
+               ON supplier.supplierid = stock.supplier_id
+             LEFT JOIN sys_shop AS shop
+               ON shop.shopid = stock.stock_in_shop
+             WHERE stock.item_name_id = :item_id
+               AND stock.stock_status = 1
+               AND stock.stock_current > 0",
+        );
+        $stmt->execute(["item_id" => $itemId]);
+
+        return $stmt->fetchAll();
+    }
+
+    private function imeiStockByItem(int $itemId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT stock.item_name,
+                    stock.item_sell_price,
+                    stock.item_cost_price,
+                    stock.item_other_price,
+                    stock.supplier_id,
+                    supplier.supplier_name,
+                    stock.imei_no,
+                    stock.item_color,
+                    stock.grn_refno,
+                    shop.shop_info_name
+             FROM shop_stock_imei AS stock
+             LEFT JOIN shop_supplier AS supplier
+               ON supplier.supplierid = stock.supplier_id
+             LEFT JOIN sys_shop AS shop
+               ON shop.shopid = stock.stock_in_shop
+             WHERE stock.item_name_id = :item_id
+               AND stock.stock_status = 1
+               AND stock.stock_current > 0",
+        );
+        $stmt->execute(["item_id" => $itemId]);
+
+        return $stmt->fetchAll();
+    }
+
+    private function rechargeStockByItem(int $itemId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT stock.card_name,
+                    stock.sell_price,
+                    stock.cost_price,
+                    stock.other_price,
+                    stock.current_stock,
+                    stock.recordid AS grn_refno,
+                    shop.shop_info_name
+             FROM shop_rcv_stock AS stock
+             LEFT JOIN sys_shop AS shop
+               ON shop.shopid = stock.stock_in_shop
+             WHERE stock.item_name_id = :item_id
+               AND stock.stock_status = 1",
+        );
+        $stmt->execute(["item_id" => $itemId]);
+
+        return $stmt->fetchAll();
+    }
+
+    private function barcodeStockByCode(string $code): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT stock.item_name,
+                    stock.item_sell_price,
+                    stock.item_cost_price,
+                    stock.item_other_price,
+                    stock.supplier_id,
+                    supplier.supplier_name,
+                    stock.stock_current,
+                    stock.gen_refno,
+                    stock.grn_refno,
+                    shop.shop_info_name
+             FROM shop_stock_item AS stock
+             LEFT JOIN shop_supplier AS supplier
+               ON supplier.supplierid = stock.supplier_id
+             LEFT JOIN sys_shop AS shop
+               ON shop.shopid = stock.stock_in_shop
+             WHERE stock.gen_refno = :code
+               AND stock.stock_status = 1
+               AND stock.stock_current > 0",
+        );
+        $stmt->execute(["code" => $code]);
+
+        return $stmt->fetchAll();
+    }
+
+    private function imeiStockByCode(string $code): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT stock.item_name,
+                    stock.item_sell_price,
+                    stock.item_cost_price,
+                    stock.item_other_price,
+                    stock.supplier_id,
+                    supplier.supplier_name,
+                    stock.imei_no,
+                    stock.item_color,
+                    stock.grn_refno,
+                    shop.shop_info_name
+             FROM shop_stock_imei AS stock
+             LEFT JOIN shop_supplier AS supplier
+               ON supplier.supplierid = stock.supplier_id
+             LEFT JOIN sys_shop AS shop
+               ON shop.shopid = stock.stock_in_shop
+             WHERE stock.imei_no = :code
+               AND stock.stock_status = 1
+               AND stock.stock_current > 0",
+        );
+        $stmt->execute(["code" => $code]);
+
+        return $stmt->fetchAll();
+    }
+
+    private function barcodePosByItem(array $item, int $shopId): array
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = (int) $item["item_id"];
+        $params["item_cat"] = (int) $item["item_cat"];
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_stock_item AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.stock_current > 0
+               AND stock.stock_status < 2
+               AND {$shopSql}
+             ORDER BY stock.item_stock_id ASC
+             LIMIT 1",
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return $this->emptyPosResult("No Stock Found");
+        }
+
+        $total = $this->sumBarcodeStock((int) $item["item_id"], (int) $item["item_cat"], $shopId, false);
+
+        return $this->buildPosResult([
+            "item_id" => (int) $item["item_id"],
+            "cat_id" => (int) $item["item_cat"],
+            "name" => (string) ($row["item_name"] ?? ""),
+            "type" => (string) ($item["used_type"] ?? ""),
+            "cost" => (string) ($row["item_cost_price"] ?? ""),
+            "sell" => (string) ($row["item_sell_price"] ?? ""),
+            "low" => (string) ($row["item_low_price"] ?? ""),
+            "other" => (string) ($row["item_other_price"] ?? ""),
+            "warranty" => trim(((string) ($row["warranty_span"] ?? "")) . " " . ((string) ($row["warranty_type"] ?? ""))),
+            "stock_total" => $total,
+            "code" => (string) ($row["gen_refno"] ?? ""),
+            "row_id" => (string) ($row["item_stock_id"] ?? ""),
+        ]);
+    }
+
+    private function imeiPosByItem(array $item, int $shopId): array
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = (int) $item["item_id"];
+        $params["item_cat"] = (int) $item["item_cat"];
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_stock_imei AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.stock_current > 0
+               AND stock.stock_status < 2
+               AND {$shopSql}
+             ORDER BY stock.item_stock_id_imei ASC
+             LIMIT 1",
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return $this->emptyPosResult("No Stock Found");
+        }
+
+        $total = $this->sumImeiStock((int) $item["item_id"], (int) $item["item_cat"], $shopId, true);
+
+        return $this->buildPosResult([
+            "item_id" => (int) $item["item_id"],
+            "cat_id" => (int) $item["item_cat"],
+            "name" => (string) ($row["item_name"] ?? ""),
+            "type" => (string) ($item["used_type"] ?? ""),
+            "cost" => (string) ($row["item_cost_price"] ?? ""),
+            "sell" => (string) ($row["item_sell_price"] ?? ""),
+            "low" => (string) ($row["item_low_price"] ?? ""),
+            "other" => (string) ($row["item_other_price"] ?? ""),
+            "warranty" => trim(((string) ($row["warranty_span"] ?? "")) . " " . ((string) ($row["warranty_type"] ?? ""))),
+            "stock_total" => $total,
+            "code" => (string) ($row["imei_no"] ?? ""),
+            "row_id" => (string) ($row["item_stock_id_imei"] ?? ""),
+        ]);
+    }
+
+    private function rechargePosByItem(array $item, int $shopId): array
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = (int) $item["item_id"];
+        $params["item_cat"] = (int) $item["item_cat"];
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_rcv_stock AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.current_stock > 0
+               AND {$shopSql}
+             ORDER BY stock.recordid ASC
+             LIMIT 1",
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return $this->emptyPosResult("No Stock Found");
+        }
+
+        $total = $this->sumRechargeStock((int) $item["item_id"], (int) $item["item_cat"], $shopId);
+
+        return $this->buildPosResult([
+            "item_id" => (int) $item["item_id"],
+            "cat_id" => (int) $item["item_cat"],
+            "name" => (string) ($row["card_name"] ?? ""),
+            "type" => (string) ($item["used_type"] ?? ""),
+            "cost" => (string) ($row["cost_price"] ?? ""),
+            "sell" => (string) ($row["sell_price"] ?? ""),
+            "low" => (string) ($row["low_price"] ?? ""),
+            "other" => (string) ($row["other_price"] ?? ""),
+            "warranty" => "",
+            "stock_total" => $total,
+            "code" => "",
+            "row_id" => (string) ($row["recordid"] ?? ""),
+        ]);
+    }
+
+    private function barcodePosByCode(string $code, int $shopId): ?array
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["code"] = $code;
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_stock_item AS stock
+             WHERE stock.gen_refno = :code
+               AND stock.stock_current > 0
+               AND stock.stock_status = 1
+               AND {$shopSql}
+             LIMIT 1",
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return null;
+        }
+
+        $total = $this->sumBarcodeStock((int) $row["item_name_id"], (int) $row["item_cat_id"], $shopId, true, $code);
+
+        return $this->buildPosResult([
+            "item_id" => (int) $row["item_name_id"],
+            "cat_id" => (int) $row["item_cat_id"],
+            "name" => (string) ($row["item_name"] ?? ""),
+            "type" => "1",
+            "cost" => (string) ($row["item_cost_price"] ?? ""),
+            "sell" => (string) ($row["item_sell_price"] ?? ""),
+            "low" => (string) ($row["item_low_price"] ?? ""),
+            "other" => (string) ($row["item_other_price"] ?? ""),
+            "warranty" => trim(((string) ($row["warranty_span"] ?? "")) . " " . ((string) ($row["warranty_type"] ?? ""))),
+            "stock_total" => $total,
+            "code" => (string) ($row["gen_refno"] ?? ""),
+            "row_id" => (string) ($row["item_stock_id"] ?? ""),
+            "supplier_id" => (string) ($row["supplier_id"] ?? ""),
+        ], true);
+    }
+
+    private function imeiPosByCode(string $code, int $shopId): ?array
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["code"] = $code;
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_stock_imei AS stock
+             WHERE stock.imei_no = :code
+               AND stock.stock_current > 0
+               AND stock.stock_status = 1
+               AND {$shopSql}
+             LIMIT 1",
+        );
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+
+        if ($row === false) {
+            return null;
+        }
+
+        $total = $this->sumImeiStock((int) $row["item_name_id"], (int) $row["item_cat_id"], $shopId, false);
+
+        return $this->buildPosResult([
+            "item_id" => (int) $row["item_name_id"],
+            "cat_id" => (int) $row["item_cat_id"],
+            "name" => (string) ($row["item_name"] ?? ""),
+            "type" => "2",
+            "cost" => (string) ($row["item_cost_price"] ?? ""),
+            "sell" => (string) ($row["item_sell_price"] ?? ""),
+            "low" => (string) ($row["item_low_price"] ?? ""),
+            "other" => (string) ($row["item_other_price"] ?? ""),
+            "warranty" => trim(((string) ($row["warranty_span"] ?? "")) . " " . ((string) ($row["warranty_type"] ?? ""))),
+            "stock_total" => $total,
+            "code" => (string) ($row["imei_no"] ?? ""),
+            "row_id" => (string) ($row["item_stock_id_imei"] ?? ""),
+            "supplier_id" => (string) ($row["supplier_id"] ?? ""),
+        ], true);
+    }
+
+    private function sumBarcodeStock(int $itemId, int $categoryId, int $shopId, bool $statusEqualsOne, string $code = ""): string
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = $itemId;
+        $params["item_cat"] = $categoryId;
+
+        $statusSql = $statusEqualsOne ? "stock.stock_status = 1" : "stock.stock_status < 2";
+        $codeSql = "";
+
+        if ($code !== "") {
+            $codeSql = " AND stock.gen_refno = :code";
+            $params["code"] = $code;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(stock.stock_current), 0)
+             FROM shop_stock_item AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND {$statusSql}
+               AND {$shopSql}{$codeSql}",
+        );
+        $stmt->execute($params);
+
+        return (string) $stmt->fetchColumn();
+    }
+
+    private function sumImeiStock(int $itemId, int $categoryId, int $shopId, bool $onlyPositive): string
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = $itemId;
+        $params["item_cat"] = $categoryId;
+
+        $positiveSql = $onlyPositive ? " AND stock.stock_current > 0" : "";
+
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(stock.stock_current), 0)
+             FROM shop_stock_imei AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.stock_status = 1
+               AND {$shopSql}{$positiveSql}",
+        );
+        $stmt->execute($params);
+
+        return (string) $stmt->fetchColumn();
+    }
+
+    private function sumRechargeStock(int $itemId, int $categoryId, int $shopId): string
+    {
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = $itemId;
+        $params["item_cat"] = $categoryId;
+
+        $stmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(stock.current_stock), 0)
+             FROM shop_rcv_stock AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.current_stock > 0
+               AND {$shopSql}",
+        );
+        $stmt->execute($params);
+
+        return (string) $stmt->fetchColumn();
+    }
+
+    private function shopScopeClause(int $shopId, string $column): array
+    {
+        if ($shopId > 0) {
+            return ["{$column} = :shop_id", ["shop_id" => $shopId]];
+        }
+
+        return ["{$column} > 0", []];
+    }
+
+    private function emptyPosResult(string $name, bool $withSupplier = false): array
+    {
+        $result = $this->buildPosResult([
+            "item_id" => "",
+            "cat_id" => "",
+            "name" => $name,
+            "type" => "",
+            "cost" => "",
+            "sell" => "",
+            "low" => "",
+            "other" => "",
+            "warranty" => "",
+            "stock_total" => "",
+            "code" => "",
+            "row_id" => "",
+            "supplier_id" => "",
+        ], $withSupplier);
+
+        return $result;
+    }
+
+    private function buildPosResult(array $data, bool $withSupplier = false): array
+    {
+        $result = [
+            "itm_selectid" => (string) $data["item_id"],
+            "itm_selcatid" => (string) $data["cat_id"],
+            "itm_selctnme" => (string) $data["name"],
+            "itm_itmstype" => (string) $data["type"],
+            "itm_costprce" => (string) $data["cost"],
+            "itm_sellpris" => (string) $data["sell"],
+            "itm_lowprise" => (string) $data["low"],
+            "itm_oterprse" => (string) $data["other"],
+            "itm_warntyad" => (string) $data["warranty"],
+            "itm_stktotal" => (string) $data["stock_total"],
+            "itm_imeicode" => (string) $data["code"],
+            "row_ids_data" => (string) $data["row_id"],
+        ];
+
+        if ($withSupplier) {
+            $result["itm_suply_id"] = (string) ($data["supplier_id"] ?? "");
+        }
+
+        return $result;
     }
 
     public static function typeLabel(int $usedType): string

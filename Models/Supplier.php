@@ -65,4 +65,13 @@ class Supplier extends Model
             "supplier_address" => $data["supplier_address"],
         ]);
     }
+
+    public function allWithBalances(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM shop_supplier ORDER BY supplierid ASC",
+        );
+
+        return $stmt->fetchAll();
+    }
 }

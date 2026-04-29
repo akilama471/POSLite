@@ -143,6 +143,49 @@ Implemented in:
 - `new-code/views/catalog/items/index.php`
 - `new-code/views/catalog/items/edit.php`
 
+#### Account Balance Views
+Migrated from:
+- `old-code/app/supplier_accounts.php`
+- `old-code/app/customer_accounts.php`
+- `old-code/app/c_supp_accounts.php`
+- `old-code/app/c_cus_accounts.php`
+
+Implemented in:
+- `new-code/controller/AccountBalanceController.php`
+- `new-code/views/catalog/accounts/suppliers.php`
+- `new-code/views/catalog/accounts/customers.php`
+- `new-code/Models/Supplier.php`
+- `new-code/Models/Customer.php`
+
+#### POS Helper Replacements
+Migrated from:
+- `old-code/app/c_pos_chk_customer.php`
+- `old-code/app/search_item.php`
+- `old-code/app/c_itm_serch_func.php`
+- `old-code/app/c_pos_chg_item.php`
+- `old-code/app/c_pos_chg_itemcode.php`
+
+Implemented in:
+- `new-code/controller/PosHelperController.php`
+- `new-code/controller/StockSearchController.php`
+- `new-code/views/catalog/items/search.php`
+- `new-code/Models/Customer.php`
+- `new-code/Models/Item.php`
+- `new-code/Models/ProductCategory.php`
+
+#### Payment Entry
+Migrated from:
+- `old-code/app/supplier_payment.php`
+- `old-code/app/customer_payment.php`
+- `old-code/app/c_supp_upd_details.php`
+- `old-code/app/c_cust_upd_details.php`
+
+Implemented in:
+- `new-code/controller/PaymentController.php`
+- `new-code/Models/Finance.php`
+- `new-code/views/finance/suppliers/form.php`
+- `new-code/views/finance/customers/form.php`
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -166,16 +209,27 @@ Implemented in:
 
 ### Catalog
 - `/operators`
+- `/api/pos/customers`
+- `/api/pos/items/by-name`
+- `/api/pos/items/by-code`
+- `/api/items/by-category`
 - `/items`
 - `/items/create`
 - `/items/{id}/edit`
+- `/items/search`
 - `/categories`
 - `/suppliers`
 - `/suppliers/create`
 - `/suppliers/{id}/edit`
+- `/supplier-accounts`
+- `/supplier-payments`
+- `/api/supplier-payments/details`
 - `/customers`
 - `/customers/create`
 - `/customers/{id}/edit`
+- `/customer-accounts`
+- `/customer-payments`
+- `/api/customer-payments/details`
 
 ## Validation Completed
 - Ran `php -l` over all PHP files in `new-code`
@@ -183,16 +237,14 @@ Implemented in:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. Supplier/customer account balance views
-2. POS-side customer lookup helper replacement
-3. Search-item/POS helper endpoints for the new item master
-4. Remaining low-risk stock config pages
+1. Remaining low-risk stock config pages
+2. Finance credit-balance views and payment reports
+3. Cashier duty-on/off integration for payment enforcement
+4. POS screen migration onto the new helper endpoints
 
 Recommended legacy files to inspect next:
-- `old-code/app/c_supp_accounts.php`
-- `old-code/app/c_cus_accounts.php`
-- `old-code/app/search_item.php`
-- `old-code/app/c_pos_chk_customer.php`
+- `old-code/app/supplier_chashcredit_list.php`
+- `old-code/app/customer_chashcredit_list.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

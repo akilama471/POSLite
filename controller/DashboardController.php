@@ -29,13 +29,23 @@ class DashboardController
     {
         $itemHref = ($permissions["p_16"] ?? false)
             ? "/items"
-            : (($permissions["p_15"] ?? false) ? "/items/create" : "#");
+            : (($permissions["p_17"] ?? false)
+                ? "/items/search"
+                : (($permissions["p_15"] ?? false) ? "/items/create" : "#"));
         $supplierHref = ($permissions["p_26"] ?? false)
             ? "/suppliers"
-            : (($permissions["p_25"] ?? false) ? "/suppliers/create" : "#");
+            : (($permissions["p_27"] ?? false)
+                ? "/supplier-accounts"
+                : (($permissions["p_29"] ?? false)
+                    ? "/supplier-payments"
+                    : (($permissions["p_25"] ?? false) ? "/suppliers/create" : "#")));
         $customerHref = ($permissions["p_37"] ?? false)
             ? "/customers"
-            : (($permissions["p_36"] ?? false) ? "/customers/create" : "#");
+            : (($permissions["p_39"] ?? false)
+                ? "/customer-accounts"
+                : (($permissions["p_41"] ?? false)
+                    ? "/customer-payments"
+                    : (($permissions["p_36"] ?? false) ? "/customers/create" : "#")));
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],

@@ -95,4 +95,45 @@ class Customer extends Model
             "status" => $status,
         ]);
     }
+
+    public function accounts(string $name = "", bool $positiveOnly = false): array
+    {
+        $sql = "SELECT * FROM shop_customer WHERE recordid > 0";
+        $params = [];
+
+        if ($positiveOnly) {
+            $sql .= " AND accbalance > 0";
+        }
+
+        if ($name !== "") {
+            $sql .= " AND cus_name = :name";
+            $params["name"] = $name;
+        }
+
+        $sql .= " ORDER BY recordid ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    public function activeLookup(string $name = "", string $mobile = ""): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT recordid, cus_name, cus_mobile
+             FROM shop_customer
+             WHERE cus_name LIKE :name
+               AND cus_mobile LIKE :mobile
+               AND recordid > 0
+               AND status = 1
+             ORDER BY recordid ASC",
+        );
+        $stmt->execute([
+            "name" => "%" . $name . "%",
+            "mobile" => "%" . $mobile . "%",
+        ]);
+
+        return $stmt->fetchAll();
+    }
 }

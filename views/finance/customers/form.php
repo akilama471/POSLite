@@ -1,0 +1,182 @@
+<?php
+$receipt = is_array($receipt ?? null) ? $receipt : null;
+$selectedCustomerId = (int) ($selectedCustomer["recordid"] ?? 0);
+?>
+
+<div class="app-shell">
+    <header class="topbar">
+        <div>
+            <div class="brand">Customer Payment</div>
+            <div class="muted" style="color: #b8c6cf;">Migrated from `customer_payment.php` and `c_cust_upd_details.php`</div>
+        </div>
+    </header>
+
+    <div class="shell-grid">
+        <?php require BASE_PATH . "/views/catalog/_nav.php"; ?>
+        <main class="page">
+            <?php require BASE_PATH . "/views/settings/_flash.php"; ?>
+
+            <?php if ($receipt !== null): ?>
+                <section class="card" style="margin-bottom:18px;">
+                    <div class="tag">Payment Recorded</div>
+                    <p style="margin:14px 0 0;">
+                        Customer: <strong><?= htmlspecialchars((string) $receipt["name"], ENT_QUOTES, "UTF-8") ?></strong><br>
+                        Method: <strong><?= htmlspecialchars(ucfirst((string) $receipt["method"]), ENT_QUOTES, "UTF-8") ?></strong><br>
+                        Amount: <strong>Rs. <?= number_format((float) $receipt["amount"], 2, ".", ",") ?></strong><br>
+                        Time: <strong><?= htmlspecialchars((string) $receipt["recordtime"], ENT_QUOTES, "UTF-8") ?></strong>
+                        <?php if (!empty($receipt["reference"])): ?><br>Cheque No: <strong><?= htmlspecialchars((string) $receipt["reference"], ENT_QUOTES, "UTF-8") ?></strong><?php endif; ?>
+                    </p>
+                </section>
+            <?php endif; ?>
+
+            <section class="card" style="margin-bottom:18px;">
+                <p class="section-copy" style="margin:0;">
+                    This migration records customer payments into the legacy finance tables and keeps the write flow in-app. Cashier duty-on enforcement and bill-print handoff are still queued for later cashier/report migration.
+                </p>
+            </section>
+
+            <section class="card">
+                <form method="POST" action="/customer-payments">
+                    <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+
+                    <div class="grid" style="grid-template-columns: minmax(280px, 1fr) auto; align-items:end;">
+                        <div class="form-row">
+                            <label for="customer_id">Customer Name</label>
+                            <select class="input" id="customer_id" name="customer_id" onchange="loadCustomerDetails(this.value)" required>
+                                <option value="">Select customer</option>
+                                <?php foreach ($customers as $customer): ?>
+                                    <option value="<?= (int) $customer["recordid"] ?>" <?= $selectedCustomerId === (int) $customer["recordid"] ? "selected" : "" ?>>
+                                        <?= htmlspecialchars((string) $customer["cus_name"], ENT_QUOTES, "UTF-8") ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <a class="btn" href="/customer-payments" style="background:#eef2f5; color:#163041;">Reset</a>
+                    </div>
+
+                    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top:16px;">
+                        <div class="form-row">
+                            <label>Customer Address</label>
+                            <input class="input" id="customer_address" readonly value="<?= htmlspecialchars((string) ($selectedCustomer["cus_addr"] ?? ""), ENT_QUOTES, "UTF-8") ?>">
+                        </div>
+                        <div class="form-row">
+                            <label>Customer Telephone</label>
+                            <input class="input" id="customer_mobile" readonly value="<?= htmlspecialchars((string) ($selectedCustomer["cus_mobile"] ?? ""), ENT_QUOTES, "UTF-8") ?>">
+                        </div>
+                        <div class="form-row">
+                            <label>Customer Balance</label>
+                            <input class="input" id="customer_balance" readonly value="<?= $selectedCustomer ? "Rs. " . number_format((float) ($selectedCustomer["accbalance"] ?? 0), 2, ".", ",") : "" ?>">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:16px;">
+                        <label style="display:block; margin-bottom:8px;">Select Payment Method</label>
+                        <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                            <label><input type="radio" name="payment_method" value="cash" checked onclick="toggleCustomerPaymentMode()"> Cash</label>
+                            <label><input type="radio" name="payment_method" value="cheque" onclick="toggleCustomerPaymentMode()"> Cheque</label>
+                            <label><input type="radio" name="payment_method" value="credit" onclick="toggleCustomerPaymentMode()"> Cash Credit</label>
+                        </div>
+                    </div>
+
+                    <div id="customer_payment_mode_cash" style="margin-top:18px;">
+                        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                            <div class="form-row">
+                                <label for="pay_cashamount">Cash Pay Amount (Rs.)</label>
+                                <input class="input" id="pay_cashamount" name="pay_cashamount">
+                            </div>
+                            <div class="form-row" style="grid-column: 1 / -1;">
+                                <label for="pay_cashreason">Payment Reason</label>
+                                <input class="input" id="pay_cashreason" name="pay_cashreason">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="customer_payment_mode_cheque" style="margin-top:18px;" hidden>
+                        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+                            <div class="form-row">
+                                <label for="pay_chequeamount">Cheque Pay Amount (Rs.)</label>
+                                <input class="input" id="pay_chequeamount" name="pay_chequeamount">
+                            </div>
+                            <div class="form-row">
+                                <label for="pay_chequenumber">Cheque Number</label>
+                                <input class="input" id="pay_chequenumber" name="pay_chequenumber">
+                            </div>
+                            <div class="form-row">
+                                <label for="pay_chequedate">Cheque Date</label>
+                                <input class="input" id="pay_chequedate" name="pay_chequedate" type="date">
+                            </div>
+                            <div class="form-row">
+                                <label for="cheque_reminder">Reminder</label>
+                                <select class="input" id="cheque_reminder" name="cheque_reminder">
+                                    <option value="1">Turn Off</option>
+                                    <option value="2">Remind Me On</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label for="pay_chequereminderdate">Reminder Date</label>
+                                <input class="input" id="pay_chequereminderdate" name="pay_chequereminderdate" type="date">
+                            </div>
+                            <div class="form-row" style="grid-column: 1 / -1;">
+                                <label for="pay_chequereason">Payment Reason</label>
+                                <input class="input" id="pay_chequereason" name="pay_chequereason">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="customer_payment_mode_credit" style="margin-top:18px;" hidden>
+                        <p class="muted" style="margin-top:0;">Select the customer cash-credit records that should be settled by this payment.</p>
+                        <div id="customer_credits" class="stack"></div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+                        <button class="btn btn-primary" type="submit">Record Customer Payment</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+function toggleCustomerPaymentMode() {
+    const mode = document.querySelector('input[name="payment_method"]:checked')?.value || "cash";
+    document.getElementById("customer_payment_mode_cash").hidden = mode !== "cash";
+    document.getElementById("customer_payment_mode_cheque").hidden = mode !== "cheque";
+    document.getElementById("customer_payment_mode_credit").hidden = mode !== "credit";
+}
+
+async function loadCustomerDetails(customerId) {
+    if (!customerId) {
+        document.getElementById("customer_address").value = "";
+        document.getElementById("customer_mobile").value = "";
+        document.getElementById("customer_balance").value = "";
+        document.getElementById("customer_credits").innerHTML = "";
+        return;
+    }
+
+    const response = await fetch("/api/customer-payments/details?customer_id=" + encodeURIComponent(customerId));
+    if (!response.ok) {
+        return;
+    }
+
+    const data = await response.json();
+    document.getElementById("customer_address").value = data.address || "";
+    document.getElementById("customer_mobile").value = data.mobile || "";
+    document.getElementById("customer_balance").value = "Rs. " + Number(data.balance || 0).toFixed(2);
+
+    const target = document.getElementById("customer_credits");
+    target.innerHTML = "";
+    for (const credit of data.credits || []) {
+        const row = document.createElement("label");
+        row.className = "card";
+        row.style.padding = "12px";
+        row.innerHTML = '<input type="checkbox" name="cash_credits_rec[]" value="' + credit.logid + '"> Rs. ' + Number(credit.amount || 0).toFixed(2) + ' (' + (credit.remark || '') + ')';
+        target.appendChild(row);
+    }
+}
+
+toggleCustomerPaymentMode();
+<?php if ($selectedCustomerId > 0): ?>
+loadCustomerDetails(<?= $selectedCustomerId ?>);
+<?php endif; ?>
+</script>

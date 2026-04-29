@@ -9,6 +9,9 @@
         <?php if (can("p_16")): ?>
             <a class="nav-link <?= $currentPath === "/items" || str_starts_with($currentPath, "/items/") ? "active" : "" ?>" href="/items">Edit Items</a>
         <?php endif; ?>
+        <?php if (can("p_17")): ?>
+            <a class="nav-link <?= $currentPath === "/items/search" ? "active" : "" ?>" href="/items/search">Search Items</a>
+        <?php endif; ?>
         <?php if (can("p_18")): ?>
             <a class="nav-link <?= $currentPath === "/categories" ? "active" : "" ?>" href="/categories">Categories</a>
         <?php endif; ?>
@@ -21,11 +24,23 @@
         <?php if (can("p_26")): ?>
             <a class="nav-link <?= $currentPath === "/suppliers" ? "active" : "" ?>" href="/suppliers">Supplier List</a>
         <?php endif; ?>
+        <?php if (can("p_27")): ?>
+            <a class="nav-link <?= $currentPath === "/supplier-accounts" ? "active" : "" ?>" href="/supplier-accounts">Supplier Accounts</a>
+        <?php endif; ?>
+        <?php if (can("p_29")): ?>
+            <a class="nav-link <?= $currentPath === "/supplier-payments" ? "active" : "" ?>" href="/supplier-payments">Supplier Payment</a>
+        <?php endif; ?>
         <?php if (can("p_36")): ?>
             <a class="nav-link <?= $currentPath === "/customers/create" ? "active" : "" ?>" href="/customers/create">Add Customer</a>
         <?php endif; ?>
         <?php if (can("p_37")): ?>
             <a class="nav-link <?= $currentPath === "/customers" ? "active" : "" ?>" href="/customers">Manage Customers</a>
+        <?php endif; ?>
+        <?php if (can("p_39")): ?>
+            <a class="nav-link <?= $currentPath === "/customer-accounts" ? "active" : "" ?>" href="/customer-accounts">Customer Accounts</a>
+        <?php endif; ?>
+        <?php if (can("p_41")): ?>
+            <a class="nav-link <?= $currentPath === "/customer-payments" ? "active" : "" ?>" href="/customer-payments">Customer Payment</a>
         <?php endif; ?>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>
