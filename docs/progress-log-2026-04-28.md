@@ -423,6 +423,40 @@ Scope completed:
 - keyboard focus shortcuts for category (`F4`), code lookup (`F8`), and cash amount (`F2`)
 - cashier-entered cash field can fast-submit checkout for registered-customer bills
 
+## 2026-04-29 POS Modal Edit Slice
+Migrated from:
+- line-edit interaction parts of `old-code/app/pointofsale_new.php`
+- legacy `c_pos_temp_editbeforeinfo.php` and `c_pos_temp_editposupdatedb.php` user flow
+
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- replaced inline line-item editing inputs with a cashier-friendly in-page edit modal
+- edit modal preloads current line values and respects IMEI single-quantity behavior
+- click-to-edit and `Esc`/backdrop close behavior now match the old popup-style operator flow more closely
+- delete remains immediate from the bill grid while edits happen in a focused dialog
+
+## 2026-04-29 POS Bulk IMEI Slice
+Migrated from:
+- bulk IMEI entry parts of `old-code/app/pointofsale_new.php`
+- `old-code/app/c_pos_blk_chkitem.php`
+- `old-code/app/c_pos_temp_itemtblupdblk.php`
+- `old-code/app/c_pos_tempbulkimei_delete.php`
+
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/Models/Item.php`
+- `new-code/views/pos/index.php`
+- `new-code/public/index.php`
+
+Scope completed:
+- session-safe bulk IMEI add for IMEI-controlled items
+- bulk modal accepts one-per-line IMEIs or a continuous 15-digit stream
+- validates item/shop stock before staging
+- prevents duplicate IMEIs across the current user's open POS slots
+- adds matched IMEIs directly into the active bill without temp bulk tables
+
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
   - controller

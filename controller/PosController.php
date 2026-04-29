@@ -211,6 +211,82 @@ class PosController
         redirect("/pos");
     }
 
+    public function addBulkImeiItems(Request $request): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
+            redirect("/pos");
+        }
+
+        $lookup = $this->normalizeLookupResult(json_decode((string) $request->input("lookup_payload", "{}"), true) ?: []);
+        $itemId = (int) ($lookup["item_id"] ?? 0);
+        $categoryId = (int) ($lookup["cat_id"] ?? 0);
+        $type = (int) ($lookup["type"] ?? 0);
+
+        if ($itemId < 1 || $categoryId < 1 || $type !== 2) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Select a valid IMEI-controlled item before bulk add."];
+            redirect("/pos");
+        }
+
+        $requestedQty = max(1, (int) $request->input("qty", 1));
+        $salePrice = (float) $request->input("sale_price", $lookup["sell_price"] ?? 0);
+        $discount = max(0, (float) $request->input("discount", 0));
+        $warranty = trim((string) $request->input("warranty", (string) ($lookup["warranty"] ?? "")));
+        $input = (string) $request->input("imei_bulk_input", "");
+        $imeis = $this->parseImeis($input);
+
+        if ($imeis === []) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Enter at least one IMEI for bulk add."];
+            redirect("/pos");
+        }
+
+        if (count($imeis) !== $requestedQty) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Bulk IMEI count must match the requested quantity."];
+            redirect("/pos");
+        }
+
+        $auth = auth_user() ?? [];
+        $itemModel = new Item();
+        $matches = $itemModel->imeiBulkMatches($itemId, $categoryId, (int) ($auth["shop_id"] ?? 0), $imeis);
+        $alreadyStaged = $this->stagedImeiCodes();
+        $cart = $this->cart($this->activeSlot());
+
+        foreach ($imeis as $imei) {
+            if (in_array($imei, $alreadyStaged, true)) {
+                $_SESSION["flash"] = ["type" => "error", "message" => $imei . " is already staged in another bill slot."];
+                redirect("/pos");
+            }
+
+            if (!isset($matches[$imei])) {
+                $_SESSION["flash"] = ["type" => "error", "message" => $imei . " was not matched to available stock for the selected item."];
+                redirect("/pos");
+            }
+        }
+
+        foreach ($imeis as $imei) {
+            $row = $matches[$imei];
+            $lineLookup = [
+                "item_id" => (string) $itemId,
+                "cat_id" => (string) $categoryId,
+                "type" => "2",
+                "name" => (string) ($row["item_name"] ?? $lookup["name"] ?? ""),
+                "code" => (string) $imei,
+                "cost_price" => (string) ($row["item_cost_price"] ?? $lookup["cost_price"] ?? ""),
+                "sell_price" => (string) ($row["item_sell_price"] ?? $lookup["sell_price"] ?? ""),
+                "warranty" => $warranty === "" ? (string) ($lookup["warranty"] ?? "") : $warranty,
+                "row_id" => (string) ($row["item_stock_id_imei"] ?? ""),
+                "supplier_id" => (string) ($row["supplier_id"] ?? ""),
+                "stock_total" => (string) ($lookup["stock_total"] ?? ""),
+            ];
+
+            $cart["lines"][] = $this->buildCartLine($lineLookup, 1, $salePrice, $discount, $warranty);
+        }
+
+        $this->storeCart($this->activeSlot(), $cart);
+        $_SESSION["flash"] = ["type" => "success", "message" => count($imeis) . " IMEI item(s) added to the current bill."];
+        redirect("/pos");
+    }
+
     public function updateLine(Request $request, string $index): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
@@ -573,6 +649,39 @@ class PosController
             "row_id" => (string) ($result["row_ids_data"] ?? $result["row_id"] ?? ""),
             "supplier_id" => (string) ($result["itm_suply_id"] ?? $result["supplier_id"] ?? ""),
         ];
+    }
+
+    private function parseImeis(string $input): array
+    {
+        $sanitized = preg_replace('/[^0-9A-Za-z]/', '', $input) ?? '';
+
+        if ($sanitized !== '' && strlen($sanitized) % 15 === 0 && strlen($sanitized) > 15) {
+            return array_values(array_filter(str_split($sanitized, 15)));
+        }
+
+        $parts = preg_split('/[\s,;|]+/', trim($input)) ?: [];
+
+        return array_values(array_filter(array_map(
+            static fn (mixed $part): string => trim((string) $part),
+            $parts,
+        )));
+    }
+
+    private function stagedImeiCodes(): array
+    {
+        $state = $this->slotStore();
+        $codes = [];
+
+        foreach (self::SLOT_IDS as $slotId) {
+            $lines = $state["carts"][$slotId]["lines"] ?? [];
+            foreach ($lines as $line) {
+                if ((string) ($line["type"] ?? "") === "2" && trim((string) ($line["code"] ?? "")) !== "") {
+                    $codes[] = (string) $line["code"];
+                }
+            }
+        }
+
+        return array_values(array_unique($codes));
     }
 
     private function activeSlot(): int

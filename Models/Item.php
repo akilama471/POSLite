@@ -105,6 +105,17 @@ class Item extends Model
         return $item ?: null;
     }
 
+    public function findById(int $itemId): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM prod_items WHERE item_id = :item_id LIMIT 1",
+        );
+        $stmt->execute(["item_id" => $itemId]);
+
+        $item = $stmt->fetch();
+        return $item ?: null;
+    }
+
     public function existsByName(string $name, ?int $excludeId = null): bool
     {
         $sql = "SELECT COUNT(*) FROM prod_items WHERE item_name = :name";
@@ -280,6 +291,48 @@ class Item extends Model
         }
 
         return $this->emptyPosResult("No Data Matched", true);
+    }
+
+    public function imeiBulkMatches(int $itemId, int $categoryId, int $shopId, array $imeis): array
+    {
+        $imeis = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $imei): string => trim((string) $imei),
+            $imeis,
+        ))));
+
+        if ($imeis === []) {
+            return [];
+        }
+
+        [$shopSql, $params] = $this->shopScopeClause($shopId, "stock.stock_in_shop");
+        $params["item_id"] = $itemId;
+        $params["item_cat"] = $categoryId;
+
+        $placeholders = [];
+        foreach ($imeis as $index => $imei) {
+            $key = "imei_" . $index;
+            $placeholders[] = ":" . $key;
+            $params[$key] = $imei;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT *
+             FROM shop_stock_imei AS stock
+             WHERE stock.item_name_id = :item_id
+               AND stock.item_cat_id = :item_cat
+               AND stock.stock_current > 0
+               AND stock.stock_status = 1
+               AND {$shopSql}
+               AND stock.imei_no IN (" . implode(", ", $placeholders) . ")",
+        );
+        $stmt->execute($params);
+
+        $rows = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $rows[(string) $row["imei_no"]] = $row;
+        }
+
+        return $rows;
     }
 
     private function barcodeStockByItem(int $itemId): array

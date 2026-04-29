@@ -195,7 +195,10 @@ $formatMoney = static function (mixed $value): string {
                     </div>
 
                     <div style="margin-top:16px;">
-                        <button class="btn btn-primary" type="submit">Add To Bill</button>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <button class="btn btn-primary" type="submit">Add To Bill</button>
+                            <button class="btn" id="bulk_imei_button" type="button" onclick="openBulkImeiModal()" style="background:#eef2f5; color:#163041;" hidden>Add Bulk IMEIs</button>
+                        </div>
                     </div>
                 </form>
             </section>
@@ -221,24 +224,28 @@ $formatMoney = static function (mixed $value): string {
                                 <tr style="border-bottom:1px solid #edf1f4;">
                                     <td style="padding:12px;"><?= htmlspecialchars((string) $line["item_name"], ENT_QUOTES, "UTF-8") ?></td>
                                     <td style="padding:12px;"><?= htmlspecialchars((string) $line["code"], ENT_QUOTES, "UTF-8") ?></td>
-                                    <td style="padding:12px;">
-                                        <form method="POST" action="/pos/items/<?= (int) $index ?>" style="display:flex; gap:8px; align-items:center;">
-                                            <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
-                                            <input class="input" name="qty" type="number" min="1" step="1" value="<?= (int) $line["qty"] ?>" style="min-width:80px;">
-                                    </td>
-                                    <td style="padding:12px;">
-                                            <input class="input" name="sale_price" type="number" min="0" step="0.01" value="<?= htmlspecialchars((string) $line["sale_price"], ENT_QUOTES, "UTF-8") ?>" style="min-width:100px;">
-                                    </td>
-                                    <td style="padding:12px;">
-                                            <input class="input" name="discount" type="number" min="0" step="0.01" value="<?= htmlspecialchars((string) $line["discount"], ENT_QUOTES, "UTF-8") ?>" style="min-width:90px;">
-                                    </td>
+                                    <td style="padding:12px;"><?= (int) $line["qty"] ?></td>
+                                    <td style="padding:12px; text-align:right;"><?= htmlspecialchars($formatMoney($line["sale_price"] ?? 0), ENT_QUOTES, "UTF-8") ?></td>
+                                    <td style="padding:12px; text-align:right;"><?= htmlspecialchars($formatMoney($line["discount"] ?? 0), ENT_QUOTES, "UTF-8") ?></td>
                                     <td style="padding:12px;"><?= htmlspecialchars($formatMoney($line["sub_total"] ?? 0), ENT_QUOTES, "UTF-8") ?></td>
-                                    <td style="padding:12px;">
-                                            <input class="input" name="warranty" value="<?= htmlspecialchars((string) $line["warranty"], ENT_QUOTES, "UTF-8") ?>" style="min-width:120px;">
-                                    </td>
+                                    <td style="padding:12px;"><?= htmlspecialchars((string) $line["warranty"], ENT_QUOTES, "UTF-8") ?></td>
                                     <td style="padding:12px; display:flex; gap:8px;">
-                                            <button class="btn btn-primary" type="submit">Update</button>
-                                        </form>
+                                        <button
+                                            class="btn btn-primary"
+                                            type="button"
+                                            onclick='openEditModal(<?= json_encode([
+                                                "index" => (int) $index,
+                                                "item_name" => (string) $line["item_name"],
+                                                "code" => (string) $line["code"],
+                                                "qty" => (int) $line["qty"],
+                                                "sale_price" => (string) $line["sale_price"],
+                                                "discount" => (string) $line["discount"],
+                                                "warranty" => (string) $line["warranty"],
+                                                "type" => (string) $line["type"],
+                                            ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)'
+                                        >
+                                            Edit
+                                        </button>
                                         <form method="POST" action="/pos/items/<?= (int) $index ?>/delete" onsubmit="return confirm('Remove this item from the bill?');">
                                             <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
                                             <button class="btn" type="submit" style="background:#fbe4de; color:#8f2d15;">Delete</button>
@@ -297,6 +304,92 @@ $formatMoney = static function (mixed $value): string {
                     <button class="btn btn-primary" type="submit" <?= $lines === [] ? "disabled" : "" ?>>Finish Bill</button>
                 </form>
             </section>
+
+            <div id="line_edit_modal" hidden style="position:fixed; inset:0; background:rgba(10, 16, 22, 0.58); display:grid; place-items:center; padding:24px; z-index:1000;">
+                <div class="card" style="width:min(560px, 100%); max-height:90vh; overflow:auto;">
+                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:start; margin-bottom:18px;">
+                        <div>
+                            <h2 class="section-title" style="margin-bottom:4px;">Edit Current Line</h2>
+                            <div class="muted" id="line_edit_item_name"></div>
+                            <div class="muted" id="line_edit_item_code"></div>
+                        </div>
+                        <button class="btn" type="button" onclick="closeEditModal()" style="background:#eef2f5; color:#163041;">Close</button>
+                    </div>
+
+                    <form id="line_edit_form" method="POST" action="/pos/items/0">
+                        <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                            <div class="form-row">
+                                <label for="line_edit_qty">Qty</label>
+                                <input class="input" id="line_edit_qty" name="qty" type="number" min="1" step="1">
+                            </div>
+                            <div class="form-row">
+                                <label for="line_edit_sale_price">Sale Price</label>
+                                <input class="input" id="line_edit_sale_price" name="sale_price" type="number" min="0" step="0.01">
+                            </div>
+                            <div class="form-row">
+                                <label for="line_edit_discount">Discount</label>
+                                <input class="input" id="line_edit_discount" name="discount" type="number" min="0" step="0.01">
+                            </div>
+                            <div class="form-row">
+                                <label for="line_edit_warranty">Warranty</label>
+                                <input class="input" id="line_edit_warranty" name="warranty">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+                            <button class="btn btn-primary" type="submit">Update Bill Line</button>
+                            <button class="btn" type="button" onclick="closeEditModal()" style="background:#fbe4de; color:#8f2d15;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="bulk_imei_modal" hidden style="position:fixed; inset:0; background:rgba(10, 16, 22, 0.58); display:grid; place-items:center; padding:24px; z-index:1000;">
+                <div class="card" style="width:min(700px, 100%); max-height:90vh; overflow:auto;">
+                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:start; margin-bottom:18px;">
+                        <div>
+                            <h2 class="section-title" style="margin-bottom:4px;">Bulk IMEI Input</h2>
+                            <div class="muted">Paste IMEIs one per line, or as a continuous 15-digit stream. Count must match the selected quantity.</div>
+                        </div>
+                        <button class="btn" type="button" onclick="closeBulkImeiModal()" style="background:#eef2f5; color:#163041;">Close</button>
+                    </div>
+
+                    <form method="POST" action="/pos/items/imei-bulk">
+                        <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                        <input type="hidden" name="lookup_payload" id="bulk_lookup_payload">
+                        <input type="hidden" name="qty" id="bulk_qty">
+                        <input type="hidden" name="sale_price" id="bulk_sale_price">
+                        <input type="hidden" name="discount" id="bulk_discount">
+                        <input type="hidden" name="warranty" id="bulk_warranty">
+
+                        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom:16px;">
+                            <div>
+                                <div class="muted">Selected Item</div>
+                                <strong id="bulk_item_name">-</strong>
+                            </div>
+                            <div>
+                                <div class="muted">Requested Qty</div>
+                                <strong id="bulk_item_qty">0</strong>
+                            </div>
+                            <div>
+                                <div class="muted">Current Price</div>
+                                <strong id="bulk_item_price">Rs. 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="imei_bulk_input">IMEI Numbers</label>
+                            <textarea class="input" id="imei_bulk_input" name="imei_bulk_input" rows="10" style="resize:vertical;"></textarea>
+                        </div>
+
+                        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
+                            <button class="btn btn-primary" type="submit">Add Bulk IMEIs To Bill</button>
+                            <button class="btn" type="button" onclick="closeBulkImeiModal()" style="background:#fbe4de; color:#8f2d15;">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </main>
     </div>
 </div>
@@ -308,6 +401,8 @@ const itemNameList = document.getElementById("pos_item_name_list");
 const itemCodeInput = document.getElementById("pos_item_code");
 const lookupPayloadInput = document.getElementById("lookup_payload");
 const sellerIdInput = document.getElementById("seller_id_search");
+const editModal = document.getElementById("line_edit_modal");
+const bulkImeiModal = document.getElementById("bulk_imei_modal");
 
 function renderLookup(item) {
     lookupPayloadInput.value = JSON.stringify(item || {});
@@ -318,6 +413,7 @@ function renderLookup(item) {
     document.getElementById("qty").value = item?.type === "2" ? "1" : "1";
     document.getElementById("discount").value = "0";
     document.getElementById("warranty").value = item?.warranty || "";
+    syncBulkImeiButton(item);
 }
 
 async function loadCategoryItems(categoryName) {
@@ -451,6 +547,63 @@ function useCurrentCashier() {
     document.getElementById("seller_form").submit();
 }
 
+function openEditModal(line) {
+    document.getElementById("line_edit_form").action = "/pos/items/" + line.index;
+    document.getElementById("line_edit_item_name").textContent = line.item_name || "";
+    document.getElementById("line_edit_item_code").textContent = line.code || "";
+    document.getElementById("line_edit_qty").value = line.qty ?? 1;
+    document.getElementById("line_edit_sale_price").value = line.sale_price ?? "0.00";
+    document.getElementById("line_edit_discount").value = line.discount ?? "0.00";
+    document.getElementById("line_edit_warranty").value = line.warranty || "";
+    document.getElementById("line_edit_qty").readOnly = String(line.type) === "2";
+    editModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(function () {
+        document.getElementById("line_edit_sale_price")?.focus();
+    }, 0);
+}
+
+function closeEditModal() {
+    editModal.hidden = true;
+    document.body.style.overflow = "";
+}
+
+function syncBulkImeiButton(item = null) {
+    const button = document.getElementById("bulk_imei_button");
+    const selectedItem = item || JSON.parse(lookupPayloadInput.value || "{}");
+    const qty = Number(document.getElementById("qty")?.value || 0);
+    button.hidden = !(selectedItem?.type === "2" && qty > 1);
+}
+
+function openBulkImeiModal() {
+    const item = JSON.parse(lookupPayloadInput.value || "{}");
+    const qty = Number(document.getElementById("qty")?.value || 0);
+
+    if (!item?.item_id || item?.type !== "2" || qty < 2) {
+        return;
+    }
+
+    document.getElementById("bulk_lookup_payload").value = lookupPayloadInput.value;
+    document.getElementById("bulk_qty").value = qty;
+    document.getElementById("bulk_sale_price").value = document.getElementById("sale_price")?.value || "";
+    document.getElementById("bulk_discount").value = document.getElementById("discount")?.value || "0";
+    document.getElementById("bulk_warranty").value = document.getElementById("warranty")?.value || "";
+    document.getElementById("bulk_item_name").textContent = item.name || "";
+    document.getElementById("bulk_item_qty").textContent = String(qty);
+    document.getElementById("bulk_item_price").textContent = "Rs. " + Number(document.getElementById("sale_price")?.value || 0).toFixed(2);
+    document.getElementById("imei_bulk_input").value = "";
+    bulkImeiModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    window.setTimeout(function () {
+        document.getElementById("imei_bulk_input")?.focus();
+    }, 0);
+}
+
+function closeBulkImeiModal() {
+    bulkImeiModal.hidden = true;
+    document.body.style.overflow = "";
+}
+
 function togglePaymentFields() {
     const method = document.getElementById("method").value;
     document.getElementById("cash_amount_row").hidden = method === "card";
@@ -460,6 +613,10 @@ function togglePaymentFields() {
 
 itemCategory?.addEventListener("change", function () {
     loadCategoryItems(this.value);
+});
+
+document.getElementById("qty")?.addEventListener("input", function () {
+    syncBulkImeiButton();
 });
 
 sellerIdInput?.addEventListener("change", function () {
@@ -481,6 +638,16 @@ document.addEventListener("keydown", function (event) {
         event.preventDefault();
         document.getElementById("cash_amount")?.focus();
     }
+
+    if (event.key === "Escape" && editModal && !editModal.hidden) {
+        event.preventDefault();
+        closeEditModal();
+    }
+
+    if (event.key === "Escape" && bulkImeiModal && !bulkImeiModal.hidden) {
+        event.preventDefault();
+        closeBulkImeiModal();
+    }
 });
 
 document.getElementById("cash_amount")?.addEventListener("keydown", function (event) {
@@ -490,5 +657,18 @@ document.getElementById("cash_amount")?.addEventListener("keydown", function (ev
     }
 });
 
+editModal?.addEventListener("click", function (event) {
+    if (event.target === editModal) {
+        closeEditModal();
+    }
+});
+
+bulkImeiModal?.addEventListener("click", function (event) {
+    if (event.target === bulkImeiModal) {
+        closeBulkImeiModal();
+    }
+});
+
 togglePaymentFields();
+syncBulkImeiButton();
 </script>

@@ -23,6 +23,7 @@ $router->get("/api/pos/salespeople/{id}", "PosController@salesPersonLookup", ["a
 $router->post("/pos/customer", "PosController@selectCustomer", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/seller", "PosController@selectSalesPerson", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/items", "PosController@addItem", ["auth", "permission:p_2", "cashier"]);
+$router->post("/pos/items/imei-bulk", "PosController@addBulkImeiItems", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/items/{id}", "PosController@updateLine", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/items/{id}/delete", "PosController@removeLine", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/reset", "PosController@resetCart", ["auth", "permission:p_2", "cashier"]);
