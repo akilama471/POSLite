@@ -88,6 +88,61 @@ Implemented in:
 - `new-code/Models/ProductCategory.php`
 - `new-code/views/catalog/categories/index.php`
 
+#### Suppliers
+Migrated from:
+- `old-code/app/add_supplier.php`
+- `old-code/app/supplier_list.php`
+- `old-code/app/c_supp_shw.php`
+- `old-code/app/c_upd_supp_this.php`
+
+Implemented in:
+- `new-code/controller/SupplierController.php`
+- `new-code/Models/Supplier.php`
+- `new-code/views/catalog/suppliers/create.php`
+- `new-code/views/catalog/suppliers/index.php`
+- `new-code/views/catalog/suppliers/edit.php`
+
+#### Customers
+Migrated from:
+- `old-code/app/add_new_customer.php`
+- `old-code/app/manage_customer.php`
+- `old-code/app/edit_customer.php`
+- `old-code/app/c_mancus_delete.php`
+- `old-code/app/c_mancus_recover.php`
+
+Implemented in:
+- `new-code/controller/CustomerController.php`
+- `new-code/Models/Customer.php`
+- `new-code/views/catalog/customers/create.php`
+- `new-code/views/catalog/customers/index.php`
+- `new-code/views/catalog/customers/edit.php`
+- `new-code/views/catalog/_nav.php`
+
+#### Operators
+Migrated from:
+- `old-code/app/manage_operator.php`
+- `old-code/app/c_man_rcv_ope_show.php`
+- `old-code/app/c_man_rcv_ope_updt.php`
+
+Implemented in:
+- `new-code/controller/RechargeOperatorController.php`
+- `new-code/Models/RechargeOperator.php`
+- `new-code/views/catalog/operators/index.php`
+
+#### Items
+Migrated from:
+- `old-code/app/manage_item_a.php`
+- `old-code/app/manage_item_e.php`
+- `old-code/app/c_manitem_e_getdata.php`
+
+Implemented in:
+- `new-code/controller/ItemController.php`
+- `new-code/Models/Item.php`
+- `new-code/Models/RechargeCard.php`
+- `new-code/views/catalog/items/create.php`
+- `new-code/views/catalog/items/index.php`
+- `new-code/views/catalog/items/edit.php`
+
 ## Current Route Coverage
 
 ### Auth / Dashboard
@@ -110,7 +165,17 @@ Implemented in:
 - `/settings/shops/{id}/edit`
 
 ### Catalog
+- `/operators`
+- `/items`
+- `/items/create`
+- `/items/{id}/edit`
 - `/categories`
+- `/suppliers`
+- `/suppliers/create`
+- `/suppliers/{id}/edit`
+- `/customers`
+- `/customers/create`
+- `/customers/{id}/edit`
 
 ## Validation Completed
 - Ran `php -l` over all PHP files in `new-code`
@@ -118,20 +183,16 @@ Implemented in:
 
 ## Next Recommended Task
 Continue Step 3 with remaining master data domains in this order:
-1. Suppliers
-2. Customers
-3. Operators / recharge master data
-4. Item master and item edit/search screens
+1. Supplier/customer account balance views
+2. POS-side customer lookup helper replacement
+3. Search-item/POS helper endpoints for the new item master
+4. Remaining low-risk stock config pages
 
 Recommended legacy files to inspect next:
-- `old-code/app/add_supplier.php`
-- `old-code/app/supplier_list.php`
-- `old-code/app/manage_customer.php`
-- `old-code/app/add_new_customer.php`
-- `old-code/app/edit_customer.php`
-- `old-code/app/manage_operator.php`
-- `old-code/app/manage_item_a.php`
-- `old-code/app/manage_item_e.php`
+- `old-code/app/c_supp_accounts.php`
+- `old-code/app/c_cus_accounts.php`
+- `old-code/app/search_item.php`
+- `old-code/app/c_pos_chk_customer.php`
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
@@ -142,4 +203,3 @@ Recommended legacy files to inspect next:
 - Keep using legacy DB tables first
 - Replace request-driven SQL with prepared statements
 - Do not reintroduce the old iframe/AJAX-inline-edit pattern unless strictly necessary
-

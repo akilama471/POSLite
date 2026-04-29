@@ -21,21 +21,31 @@ class DashboardController
             "topItems" => $dashboardModel->topItems($userId, $shopId),
             "topPhones" => $dashboardModel->topPhones($userId, $shopId),
             "topCards" => $dashboardModel->topCards($userId, $shopId),
-            "menu" => $this->menuConfig(),
+            "menu" => $this->menuConfig($permissions),
         ]);
     }
 
-    private function menuConfig(): array
+    private function menuConfig(array $permissions): array
     {
+        $itemHref = ($permissions["p_16"] ?? false)
+            ? "/items"
+            : (($permissions["p_15"] ?? false) ? "/items/create" : "#");
+        $supplierHref = ($permissions["p_26"] ?? false)
+            ? "/suppliers"
+            : (($permissions["p_25"] ?? false) ? "/suppliers/create" : "#");
+        $customerHref = ($permissions["p_37"] ?? false)
+            ? "/customers"
+            : (($permissions["p_36"] ?? false) ? "/customers/create" : "#");
+
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
             ["key" => "p_2", "label" => "Point Of Sale", "href" => "#", "migrated" => false],
             ["key" => "p_3", "label" => "Repair Job", "href" => "#", "migrated" => false],
-            ["key" => "p_14", "label" => "Shop Items", "href" => "#", "migrated" => false],
+            ["key" => "p_14", "label" => "Shop Items", "href" => $itemHref, "migrated" => $itemHref !== "#"],
             ["key" => "p_18", "label" => "Manage Category", "href" => "/categories", "migrated" => true],
-            ["key" => "p_24", "label" => "Suppliers", "href" => "#", "migrated" => false],
+            ["key" => "p_24", "label" => "Suppliers", "href" => $supplierHref, "migrated" => $supplierHref !== "#"],
             ["key" => "p_30", "label" => "Bill Details", "href" => "#", "migrated" => false],
-            ["key" => "p_35", "label" => "Customers", "href" => "#", "migrated" => false],
+            ["key" => "p_35", "label" => "Customers", "href" => $customerHref, "migrated" => $customerHref !== "#"],
             ["key" => "p_42", "label" => "Purchases", "href" => "#", "migrated" => false],
             ["key" => "p_47", "label" => "Stocks", "href" => "#", "migrated" => false],
             ["key" => "p_56", "label" => "Cashier", "href" => "#", "migrated" => false],

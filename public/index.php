@@ -37,5 +37,24 @@ $router->get("/categories", "ProductCategoryController@index", ["auth", "permiss
 $router->post("/categories", "ProductCategoryController@store", ["auth", "permission:p_18"]);
 $router->post("/categories/{id}", "ProductCategoryController@update", ["auth", "permission:p_18"]);
 $router->post("/categories/{id}/delete", "ProductCategoryController@destroy", ["auth", "permission:p_18"]);
+$router->get("/operators", "RechargeOperatorController@index", ["auth", "permission:p_22"]);
+$router->post("/operators", "RechargeOperatorController@store", ["auth", "permission:p_22"]);
+$router->post("/operators/{id}", "RechargeOperatorController@update", ["auth", "permission:p_22"]);
+$router->get("/items", "ItemController@index", ["auth", "permission:p_16"]);
+$router->get("/items/create", "ItemController@create", ["auth", "permission:p_15"]);
+$router->post("/items", "ItemController@store", ["auth", "permission:p_15"]);
+$router->get("/items/{id}/edit", "ItemController@edit", ["auth", "permission:p_16"]);
+$router->post("/items/{id}", "ItemController@update", ["auth", "permission:p_16"]);
+$router->get("/suppliers", "SupplierController@index", ["auth", "permission:p_26"]);
+$router->get("/suppliers/create", "SupplierController@create", ["auth", "permission:p_25"]);
+$router->post("/suppliers", "SupplierController@store", ["auth", "permission:p_25"]);
+$router->get("/suppliers/{id}/edit", "SupplierController@edit", ["auth", "permission:p_26"]);
+$router->post("/suppliers/{id}", "SupplierController@update", ["auth", "permission:p_26"]);
+$router->get("/customers", "CustomerController@index", ["auth", "permission:p_37"]);
+$router->get("/customers/create", "CustomerController@create", ["auth", "permission:p_36"]);
+$router->post("/customers", "CustomerController@store", ["auth", "permission:p_36"]);
+$router->get("/customers/{id}/edit", "CustomerController@edit", ["auth", "permission:p_37"]);
+$router->post("/customers/{id}", "CustomerController@update", ["auth", "permission:p_37"]);
+$router->post("/customers/{id}/status", "CustomerController@updateStatus", ["auth", "permission:p_37"]);
 
 $router->dispatch($_SERVER["REQUEST_URI"], $_SERVER["REQUEST_METHOD"]);

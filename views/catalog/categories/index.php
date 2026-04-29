@@ -7,13 +7,7 @@
     </header>
 
     <div class="shell-grid">
-        <aside class="sidebar">
-            <h3>Catalog</h3>
-            <div class="nav-group">
-                <a class="nav-link active" href="/categories">Categories</a>
-                <a class="nav-link" href="/dashboard">Back to Dashboard</a>
-            </div>
-        </aside>
+        <?php require BASE_PATH . "/views/catalog/_nav.php"; ?>
 
         <main class="page">
             <?php require BASE_PATH . "/views/settings/_flash.php"; ?>
