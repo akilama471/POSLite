@@ -10,6 +10,7 @@ class PosSale extends Model
     {
         $shopId = (int) $payload["shop_id"];
         $userId = (int) $payload["user_id"];
+        $sellerId = (int) ($payload["seller_id"] ?? $userId);
         $customerId = (int) $payload["customer"]["id"];
         $customerName = (string) $payload["customer"]["name"];
         $lines = $payload["lines"];
@@ -60,7 +61,7 @@ class PosSale extends Model
                 "card_number" => (string) ($payment["card_number"] ?? ""),
                 "balance" => $change,
                 "operator" => $userId,
-                "seller_id" => $userId,
+                "seller_id" => $sellerId,
                 "seller_name" => (string) ($payload["seller_name"] ?? ""),
                 "billaddedtime" => $recordTime,
             ]);
@@ -168,6 +169,36 @@ class PosSale extends Model
             "bill" => $bill,
             "lines" => $lines,
         ];
+    }
+
+    public function barcodeLabels(string $billNumber): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT
+                sale.recordid,
+                sale.billnumber,
+                sale.part_id,
+                sale.type,
+                sale.item_name,
+                sale.imei_part_no,
+                sale.qty,
+                sale.waranty,
+                CASE
+                    WHEN sale.type = 1 THEN COALESCE(stock.supplier_id, '')
+                    ELSE ''
+                END AS supplier_id
+             FROM shop_pos_mainsale sale
+             LEFT JOIN (
+                SELECT gen_refno, MAX(supplier_id) AS supplier_id
+                FROM shop_stock_item
+                GROUP BY gen_refno
+             ) stock ON stock.gen_refno = sale.imei_part_no
+             WHERE sale.billnumber = :billnumber
+             ORDER BY sale.recordid ASC",
+        );
+        $stmt->execute(["billnumber" => $billNumber]);
+
+        return $stmt->fetchAll();
     }
 
     private function nextSequence(string $billMonth, int $shopId): array

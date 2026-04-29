@@ -10,7 +10,7 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
     <header class="topbar">
         <div>
             <div class="brand">Bill Completed</div>
-            <div class="muted" style="color: #b8c6cf;">Receipt view replaces the old `printmybill.php` handoff for now. Browser/printer integration is still pending.</div>
+            <div class="muted" style="color: #b8c6cf;">Receipt, reprint, and barcode-label pages now run from committed MVC bill data.</div>
         </div>
     </header>
 
@@ -26,6 +26,12 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
 
         <main class="page">
             <section class="card" style="margin-bottom:18px;">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
+                    <a class="btn btn-primary" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/print" target="_blank" rel="noopener">Print Receipt</a>
+                    <a class="btn" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/barcodes" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041;">Barcode Labels</a>
+                    <a class="btn" href="/pos" style="background:#fbe4de; color:#8f2d15;">Start New Bill</a>
+                </div>
+
                 <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
                     <div>
                         <div class="muted">Bill ID</div>
@@ -102,10 +108,6 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
                         <strong><?= htmlspecialchars($formatMoney($bill["balance"] ?? 0), ENT_QUOTES, "UTF-8") ?></strong>
                     </div>
                 </div>
-
-                <p class="muted" style="margin:18px 0 0;">
-                    Browser-side receipt printer integration and barcode/warranty print actions are still pending. This page confirms that the sale was committed successfully.
-                </p>
             </section>
         </main>
     </div>

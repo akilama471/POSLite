@@ -4,19 +4,75 @@ declare(strict_types=1);
 
 class PosController
 {
+    private const SLOT_IDS = [1, 2, 3];
+
     public function index(Request $request): void
     {
         $categoryModel = new ProductCategory();
+        $activeSlot = $this->activeSlot();
 
         View::make("pos/index", [
             "title" => "Point Of Sale",
             "auth" => auth_user(),
             "categories" => $categoryModel->allOrdered(),
-            "cart" => $this->cart(),
+            "cart" => $this->cart($activeSlot),
+            "activeSlot" => $activeSlot,
+            "slotStates" => $this->slotStates(),
             "flash" => $_SESSION["flash"] ?? null,
         ]);
 
         unset($_SESSION["flash"]);
+    }
+
+    public function switchSlot(Request $request, string $slot): void
+    {
+        $slotId = $this->normalizeSlot($slot);
+
+        if ($slotId === null) {
+            http_response_code(404);
+            View::make("errors/404", ["title" => "Slot Not Found"]);
+            return;
+        }
+
+        $this->openSlot($slotId);
+        $this->setActiveSlot($slotId);
+        $_SESSION["flash"] = ["type" => "success", "message" => "Bill slot " . $slotId . " is now active."];
+        redirect("/pos");
+    }
+
+    public function clearSlot(Request $request, string $slot): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
+            redirect("/pos");
+        }
+
+        $slotId = $this->normalizeSlot($slot);
+
+        if ($slotId === null) {
+            http_response_code(404);
+            View::make("errors/404", ["title" => "Slot Not Found"]);
+            return;
+        }
+
+        $mode = (string) $request->input("mode", "clear");
+        $this->resetSlot($slotId);
+
+        if ($slotId > 1 && $mode === "close") {
+            $state = $this->slotStore();
+            $state["open"][$slotId] = false;
+            $this->storeSlotState($state);
+
+            if ($this->activeSlot() === $slotId) {
+                $this->setActiveSlot(1);
+            }
+
+            $_SESSION["flash"] = ["type" => "success", "message" => "Bill slot " . $slotId . " was closed."];
+        } else {
+            $_SESSION["flash"] = ["type" => "success", "message" => "Bill slot " . $slotId . " was cleared."];
+        }
+
+        redirect("/pos");
     }
 
     public function lookupByName(Request $request): void
@@ -49,6 +105,21 @@ class PosController
         ]);
     }
 
+    public function salesPersonLookup(Request $request, string $id): void
+    {
+        $userModel = new User();
+        $user = $userModel->findActiveById((int) $id);
+
+        json_response([
+            "found" => $user !== null,
+            "seller" => $user === null ? null : [
+                "id" => (int) $user["myid"],
+                "name" => (string) ($user["visibledata"] ?? $user["ankaya"] ?? ""),
+                "username" => (string) ($user["ankaya"] ?? ""),
+            ],
+        ]);
+    }
+
     public function selectCustomer(Request $request): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
@@ -58,14 +129,52 @@ class PosController
 
         $customerId = (int) $request->input("customer_id", 0);
         $customerName = trim((string) $request->input("customer_name", "Cash Customer"));
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
         $cart["customer"] = [
             "id" => $customerId,
             "name" => $customerName === "" ? "Cash Customer" : $customerName,
         ];
-        $this->storeCart($cart);
+        $this->storeCart($activeSlot, $cart);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Customer updated for the current bill."];
+        redirect("/pos");
+    }
+
+    public function selectSalesPerson(Request $request): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
+            redirect("/pos");
+        }
+
+        $sellerId = (int) $request->input("seller_id", 0);
+        $userModel = new User();
+        $seller = $sellerId > 0 ? $userModel->findActiveById($sellerId) : null;
+
+        if ($sellerId > 0 && $seller === null) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Sale person not found or inactive."];
+            redirect("/pos");
+        }
+
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
+        $auth = auth_user() ?? [];
+
+        if ($seller === null) {
+            $cart["seller"] = [
+                "id" => (int) ($auth["user_id"] ?? 0),
+                "name" => (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+            ];
+        } else {
+            $cart["seller"] = [
+                "id" => (int) $seller["myid"],
+                "name" => (string) ($seller["visibledata"] ?? $seller["ankaya"] ?? ""),
+            ];
+        }
+
+        $this->storeCart($activeSlot, $cart);
+        $_SESSION["flash"] = ["type" => "success", "message" => "Sale person updated for the current bill."];
         redirect("/pos");
     }
 
@@ -93,9 +202,10 @@ class PosController
         $discount = max(0, (float) $request->input("discount", 0));
         $warranty = trim((string) $request->input("warranty", (string) ($lookup["warranty"] ?? "")));
 
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
         $cart["lines"][] = $this->buildCartLine($lookup, $qty, $salePrice, $discount, $warranty);
-        $this->storeCart($cart);
+        $this->storeCart($activeSlot, $cart);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Item added to the current bill."];
         redirect("/pos");
@@ -109,7 +219,8 @@ class PosController
         }
 
         $lineIndex = (int) $index;
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
 
         if (!isset($cart["lines"][$lineIndex])) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Cart line not found."];
@@ -130,7 +241,7 @@ class PosController
             trim((string) $request->input("warranty", (string) $line["warranty"])),
         );
 
-        $this->storeCart($cart);
+        $this->storeCart($activeSlot, $cart);
         $_SESSION["flash"] = ["type" => "success", "message" => "Cart line updated."];
         redirect("/pos");
     }
@@ -143,11 +254,12 @@ class PosController
         }
 
         $lineIndex = (int) $index;
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
 
         if (isset($cart["lines"][$lineIndex])) {
             array_splice($cart["lines"], $lineIndex, 1);
-            $this->storeCart($cart);
+            $this->storeCart($activeSlot, $cart);
             $_SESSION["flash"] = ["type" => "success", "message" => "Cart line removed."];
         }
 
@@ -161,7 +273,7 @@ class PosController
             redirect("/pos");
         }
 
-        unset($_SESSION["pos_cart"]);
+        $this->resetSlot($this->activeSlot());
         $_SESSION["flash"] = ["type" => "success", "message" => "Current bill cleared."];
         redirect("/pos");
     }
@@ -173,14 +285,15 @@ class PosController
             redirect("/pos");
         }
 
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
         $cart["payment"] = [
             "method" => (string) $request->input("method", "cash"),
             "cash_amount" => max(0, (float) $request->input("cash_amount", 0)),
             "card_amount" => max(0, (float) $request->input("card_amount", 0)),
             "card_number" => trim((string) $request->input("card_number", "")),
         ];
-        $this->storeCart($cart);
+        $this->storeCart($activeSlot, $cart);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Payment details staged for this bill."];
         redirect("/pos");
@@ -194,7 +307,8 @@ class PosController
         }
 
         $auth = auth_user() ?? [];
-        $cart = $this->cart();
+        $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
 
         if (($cart["lines"] ?? []) === []) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Add at least one item before finishing the bill."];
@@ -218,10 +332,15 @@ class PosController
         $saleModel = new PosSale();
 
         try {
+            $seller = $cart["seller"] ?? [
+                "id" => (int) ($auth["user_id"] ?? 0),
+                "name" => (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+            ];
             $billNumber = $saleModel->checkout([
                 "shop_id" => (int) ($auth["shop_id"] ?? 0),
                 "user_id" => (int) ($auth["user_id"] ?? 0),
-                "seller_name" => (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+                "seller_id" => (int) ($seller["id"] ?? 0),
+                "seller_name" => (string) ($seller["name"] ?? $auth["display_name"] ?? $auth["username"] ?? "User"),
                 "shop" => $shop,
                 "customer" => $cart["customer"],
                 "lines" => $cart["lines"],
@@ -233,57 +352,128 @@ class PosController
             redirect("/pos");
         }
 
-        unset($_SESSION["pos_cart"]);
+        $this->resetSlot($activeSlot);
+
+        if ($activeSlot > 1) {
+            $state = $this->slotStore();
+            $state["open"][$activeSlot] = false;
+            $this->storeSlotState($state);
+            $this->setActiveSlot(1);
+        }
+
         redirect("/pos/receipts/" . $billNumber);
     }
 
     public function receipt(Request $request, string $billNumber): void
     {
-        $saleModel = new PosSale();
-        $shopModel = new Shop();
-        $customerModel = new Customer();
-        $userModel = new User();
-        $receipt = $saleModel->receipt($billNumber);
+        $context = $this->receiptContext($billNumber);
 
-        if ($receipt === null) {
-            http_response_code(404);
-            View::make("errors/404", ["title" => "Receipt Not Found"]);
+        if ($context === null) {
+            $this->receiptNotFound();
             return;
         }
-
-        $bill = $receipt["bill"];
-        $customer = (int) ($bill["customer_id"] ?? 0) > 0
-            ? $customerModel->findById((int) $bill["customer_id"])
-            : null;
-        $cashier = $userModel->findById((int) ($bill["operator"] ?? 0));
-        $shop = $shopModel->findByShopId((int) ($bill["billed_shop"] ?? 0));
 
         View::make("pos/receipt", [
             "title" => "POS Receipt",
             "auth" => auth_user(),
-            "bill" => $bill,
-            "lines" => $receipt["lines"],
-            "customer" => $customer,
-            "cashier" => $cashier,
-            "shop" => $shop,
+            "bill" => $context["bill"],
+            "lines" => $context["lines"],
+            "customer" => $context["customer"],
+            "cashier" => $context["cashier"],
+            "shop" => $context["shop"],
         ]);
     }
 
-    private function cart(): array
+    public function printReceipt(Request $request, string $billNumber): void
     {
-        $cart = $_SESSION["pos_cart"] ?? null;
+        $context = $this->receiptContext($billNumber);
+
+        if ($context === null) {
+            $this->receiptNotFound();
+            return;
+        }
+
+        View::make("pos/receipt_print", [
+            "title" => "Print Receipt",
+            "bill" => $context["bill"],
+            "lines" => $context["lines"],
+            "customer" => $context["customer"],
+            "cashier" => $context["cashier"],
+            "shop" => $context["shop"],
+        ], "print");
+    }
+
+    public function barcodeLabels(Request $request, string $billNumber): void
+    {
+        $context = $this->receiptContext($billNumber);
+
+        if ($context === null) {
+            $this->receiptNotFound();
+            return;
+        }
+
+        $saleModel = new PosSale();
+
+        View::make("pos/barcodes", [
+            "title" => "Barcode Labels",
+            "auth" => auth_user(),
+            "bill" => $context["bill"],
+            "shop" => $context["shop"],
+            "labelLines" => $saleModel->barcodeLabels($billNumber),
+        ]);
+    }
+
+    public function printBarcodeLabels(Request $request, string $billNumber): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            http_response_code(419);
+            exit("Invalid CSRF token.");
+        }
+
+        $context = $this->receiptContext($billNumber);
+
+        if ($context === null) {
+            $this->receiptNotFound();
+            return;
+        }
+
+        $itemNames = (array) $request->input("item_name", []);
+        $codes = (array) $request->input("code", []);
+        $supplierIds = (array) $request->input("supplier_id", []);
+        $printCounts = (array) $request->input("print_count", []);
+        $labels = [];
+
+        foreach ($codes as $index => $code) {
+            $count = max(0, (int) ($printCounts[$index] ?? 0));
+
+            if ($count === 0 || trim((string) $code) === "") {
+                continue;
+            }
+
+            $labels[] = [
+                "item_name" => trim((string) ($itemNames[$index] ?? "")),
+                "code" => trim((string) $code),
+                "supplier_id" => trim((string) ($supplierIds[$index] ?? "")),
+                "count" => $count,
+            ];
+        }
+
+        View::make("pos/barcodes_print", [
+            "title" => "Print Barcode Labels",
+            "bill" => $context["bill"],
+            "shop" => $context["shop"],
+            "labels" => $labels,
+        ], "print");
+    }
+
+    private function cart(?int $slotId = null): array
+    {
+        $slot = $slotId ?? $this->activeSlot();
+        $state = $this->slotStore();
+        $cart = $state["carts"][$slot] ?? null;
 
         if (!is_array($cart)) {
-            $cart = [
-                "customer" => ["id" => 0, "name" => "Cash Customer"],
-                "lines" => [],
-                "payment" => [
-                    "method" => "cash",
-                    "cash_amount" => 0.0,
-                    "card_amount" => 0.0,
-                    "card_number" => "",
-                ],
-            ];
+            $cart = $this->emptyCart();
         }
 
         $cart["summary"] = $this->summary($cart["lines"], $cart["payment"]);
@@ -291,10 +481,13 @@ class PosController
         return $cart;
     }
 
-    private function storeCart(array $cart): void
+    private function storeCart(int $slotId, array $cart): void
     {
         $cart["summary"] = $this->summary($cart["lines"] ?? [], $cart["payment"] ?? []);
-        $_SESSION["pos_cart"] = $cart;
+        $state = $this->slotStore();
+        $state["open"][$slotId] = true;
+        $state["carts"][$slotId] = $cart;
+        $this->storeSlotState($state);
     }
 
     private function summary(array $lines, array $payment): array
@@ -380,5 +573,151 @@ class PosController
             "row_id" => (string) ($result["row_ids_data"] ?? $result["row_id"] ?? ""),
             "supplier_id" => (string) ($result["itm_suply_id"] ?? $result["supplier_id"] ?? ""),
         ];
+    }
+
+    private function activeSlot(): int
+    {
+        $state = $this->slotStore();
+        $slot = (int) ($state["active"] ?? 1);
+
+        return in_array($slot, self::SLOT_IDS, true) ? $slot : 1;
+    }
+
+    private function setActiveSlot(int $slotId): void
+    {
+        $state = $this->slotStore();
+        $state["active"] = $slotId;
+        $this->storeSlotState($state);
+    }
+
+    private function openSlot(int $slotId): void
+    {
+        $state = $this->slotStore();
+        $state["open"][$slotId] = true;
+
+        if (!isset($state["carts"][$slotId]) || !is_array($state["carts"][$slotId])) {
+            $state["carts"][$slotId] = $this->emptyCart();
+        }
+
+        $this->storeSlotState($state);
+    }
+
+    private function resetSlot(int $slotId): void
+    {
+        $state = $this->slotStore();
+        $state["carts"][$slotId] = $this->emptyCart();
+        $this->storeSlotState($state);
+    }
+
+    private function slotStates(): array
+    {
+        $state = $this->slotStore();
+        $output = [];
+
+        foreach (self::SLOT_IDS as $slotId) {
+            $cart = $this->cart($slotId);
+            $output[] = [
+                "slot" => $slotId,
+                "active" => $this->activeSlot() === $slotId,
+                "open" => (bool) ($state["open"][$slotId] ?? false),
+                "customer_name" => (string) ($cart["customer"]["name"] ?? "Cash Customer"),
+                "item_count" => count($cart["lines"] ?? []),
+                "total" => (float) ($cart["summary"]["total"] ?? 0),
+            ];
+        }
+
+        return $output;
+    }
+
+    private function slotStore(): array
+    {
+        $state = $_SESSION["pos_slots"] ?? null;
+
+        if (!is_array($state)) {
+            $state = [
+                "active" => 1,
+                "open" => [
+                    1 => true,
+                    2 => false,
+                    3 => false,
+                ],
+                "carts" => [
+                    1 => $this->emptyCart(),
+                    2 => $this->emptyCart(),
+                    3 => $this->emptyCart(),
+                ],
+            ];
+            $_SESSION["pos_slots"] = $state;
+        }
+
+        return $state;
+    }
+
+    private function storeSlotState(array $state): void
+    {
+        $_SESSION["pos_slots"] = $state;
+    }
+
+    private function emptyCart(): array
+    {
+        $auth = auth_user() ?? [];
+
+        return [
+            "customer" => ["id" => 0, "name" => "Cash Customer"],
+            "seller" => [
+                "id" => (int) ($auth["user_id"] ?? 0),
+                "name" => (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+            ],
+            "lines" => [],
+            "payment" => [
+                "method" => "cash",
+                "cash_amount" => 0.0,
+                "card_amount" => 0.0,
+                "card_number" => "",
+            ],
+        ];
+    }
+
+    private function normalizeSlot(string|int $slot): ?int
+    {
+        $slotId = (int) $slot;
+        return in_array($slotId, self::SLOT_IDS, true) ? $slotId : null;
+    }
+
+    private function receiptContext(string $billNumber): ?array
+    {
+        $saleModel = new PosSale();
+        $shopModel = new Shop();
+        $customerModel = new Customer();
+        $userModel = new User();
+        $receipt = $saleModel->receipt($billNumber);
+        $auth = auth_user() ?? [];
+
+        if ($receipt === null) {
+            return null;
+        }
+
+        $bill = $receipt["bill"];
+        $billShopId = (int) ($bill["billed_shop"] ?? 0);
+
+        if ((int) ($auth["shop_id"] ?? 0) !== $billShopId) {
+            return null;
+        }
+
+        return [
+            "bill" => $bill,
+            "lines" => $receipt["lines"],
+            "customer" => (int) ($bill["customer_id"] ?? 0) > 0
+                ? $customerModel->findById((int) $bill["customer_id"])
+                : null,
+            "cashier" => $userModel->findById((int) ($bill["operator"] ?? 0)),
+            "shop" => $shopModel->findByShopId($billShopId),
+        ];
+    }
+
+    private function receiptNotFound(): void
+    {
+        http_response_code(404);
+        View::make("errors/404", ["title" => "Receipt Not Found"]);
     }
 }

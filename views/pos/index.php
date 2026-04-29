@@ -1,9 +1,12 @@
 <?php
 $cart = is_array($cart ?? null) ? $cart : [];
 $customer = $cart["customer"] ?? ["id" => 0, "name" => "Cash Customer"];
+$seller = $cart["seller"] ?? ["id" => 0, "name" => ""];
 $lines = $cart["lines"] ?? [];
 $payment = $cart["payment"] ?? ["method" => "cash", "cash_amount" => 0, "card_amount" => 0, "card_number" => ""];
 $summary = $cart["summary"] ?? ["total" => 0, "paid" => 0, "balance" => 0];
+$activeSlot = (int) ($activeSlot ?? 1);
+$slotStates = is_array($slotStates ?? null) ? $slotStates : [];
 $formatMoney = static function (mixed $value): string {
     return "Rs. " . number_format((float) $value, 2, ".", ",");
 };
@@ -13,7 +16,7 @@ $formatMoney = static function (mixed $value): string {
     <header class="topbar">
         <div>
             <div class="brand">Point Of Sale</div>
-            <div class="muted" style="color: #b8c6cf;">First MVC POS slice: customer lookup, stock lookup, cart staging, and totals. Final checkout/printing still pending.</div>
+            <div class="muted" style="color: #b8c6cf;">MVC POS now covers customer lookup, stock lookup, checkout, receipt reprint, and barcode-label output.</div>
         </div>
     </header>
 
@@ -25,6 +28,29 @@ $formatMoney = static function (mixed $value): string {
                 <a class="nav-link" href="/cashier">Cashier Duty</a>
                 <a class="nav-link" href="/dashboard">Back to Dashboard</a>
             </div>
+
+            <h3 style="margin-top:20px;">Bill Slots</h3>
+            <div class="nav-group">
+                <?php foreach ($slotStates as $slotState): ?>
+                    <?php
+                    $slotId = (int) $slotState["slot"];
+                    $open = (bool) $slotState["open"];
+                    $itemCount = (int) $slotState["item_count"];
+                    $label = $slotId === 1 ? "Default" : "Slot " . $slotId;
+                    ?>
+                    <a class="nav-link <?= $slotState["active"] ? "active" : "" ?>" href="/pos/slots/<?= $slotId ?>">
+                        <div style="display:flex; justify-content:space-between; gap:8px;">
+                            <strong><?= htmlspecialchars($label, ENT_QUOTES, "UTF-8") ?></strong>
+                            <span><?= $open ? "Open" : "Closed" ?></span>
+                        </div>
+                        <div class="muted" style="margin-top:6px; color:#c8d4db;">
+                            <?= htmlspecialchars((string) $slotState["customer_name"], ENT_QUOTES, "UTF-8") ?>
+                            · <?= $itemCount ?> item(s)
+                            · <?= htmlspecialchars($formatMoney($slotState["total"]), ENT_QUOTES, "UTF-8") ?>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
         </aside>
 
         <main class="page">
@@ -33,13 +59,26 @@ $formatMoney = static function (mixed $value): string {
             <section class="card" style="margin-bottom:18px;">
                 <div class="grid" style="grid-template-columns: minmax(240px, 1fr) auto;">
                     <div>
+                        <div class="tag" style="margin-bottom:10px;"><?= $activeSlot === 1 ? "Default Bill Slot" : "Working In Slot " . $activeSlot ?></div>
                         <div class="muted">Customer</div>
                         <strong id="selected_customer_label"><?= htmlspecialchars((string) $customer["name"], ENT_QUOTES, "UTF-8") ?></strong>
+                        <div class="muted" style="margin-top:12px;">Sale Person</div>
+                        <strong id="selected_seller_label"><?= htmlspecialchars((string) ($seller["name"] ?: "Current Cashier"), ENT_QUOTES, "UTF-8") ?></strong>
                     </div>
-                    <form method="POST" action="/pos/reset" onsubmit="return confirm('Clear the current staged bill?');">
-                        <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
-                        <button class="btn" type="submit" style="background:#fbe4de; color:#8f2d15;">Clear Bill</button>
-                    </form>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+                        <form method="POST" action="/pos/slots/<?= $activeSlot ?>/clear" onsubmit="return confirm('Clear the current staged bill?');">
+                            <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                            <input type="hidden" name="mode" value="clear">
+                            <button class="btn" type="submit" style="background:#fbe4de; color:#8f2d15;">Clear Bill</button>
+                        </form>
+                        <?php if ($activeSlot > 1): ?>
+                            <form method="POST" action="/pos/slots/<?= $activeSlot ?>/clear" onsubmit="return confirm('Close this extra bill slot?');">
+                                <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                                <input type="hidden" name="mode" value="close">
+                                <button class="btn" type="submit" style="background:#1f3140; color:#fff;">Close Slot</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </section>
 
@@ -65,6 +104,29 @@ $formatMoney = static function (mixed $value): string {
                     <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
                     <input type="hidden" name="customer_id" id="customer_id_input" value="<?= (int) $customer["id"] ?>">
                     <input type="hidden" name="customer_name" id="customer_name_input" value="<?= htmlspecialchars((string) $customer["name"], ENT_QUOTES, "UTF-8") ?>">
+                </form>
+            </section>
+
+            <section class="card" style="margin-bottom:18px;">
+                <h2 class="section-title">Sale Person</h2>
+                <div class="grid" style="grid-template-columns: minmax(160px, 220px) minmax(220px, 1fr) auto; align-items:end;">
+                    <div class="form-row">
+                        <label for="seller_id_search">Sale Person ID</label>
+                        <input class="input" id="seller_id_search" value="<?= (int) ($seller["id"] ?? 0) ?>">
+                    </div>
+                    <div class="form-row">
+                        <label for="seller_name_preview">Matched User</label>
+                        <input class="input" id="seller_name_preview" value="<?= htmlspecialchars((string) ($seller["name"] ?? ""), ENT_QUOTES, "UTF-8") ?>" readonly>
+                    </div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" type="button" onclick="lookupSalesPerson()">Check ID</button>
+                        <button class="btn" type="button" onclick="useCurrentCashier()" style="background:#eef2f5; color:#163041;">Use Current Cashier</button>
+                    </div>
+                </div>
+
+                <form method="POST" action="/pos/seller" id="seller_form" style="display:none;">
+                    <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
+                    <input type="hidden" name="seller_id" id="seller_id_input" value="<?= (int) ($seller["id"] ?? 0) ?>">
                 </form>
             </section>
 
@@ -228,9 +290,7 @@ $formatMoney = static function (mixed $value): string {
                     </div>
                 </form>
 
-                <p class="muted" style="margin:16px 0 0;">
-                    This draft now supports transaction-safe checkout. Printer/browser receipt automation is still pending.
-                </p>
+                <p class="muted" style="margin:16px 0 0;">This draft writes committed bills transactionally and hands off to the new MVC receipt/print flow.</p>
 
                 <form method="POST" action="/pos/checkout" style="margin-top:16px;">
                     <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
@@ -247,6 +307,7 @@ const itemNameInput = document.getElementById("pos_item_name");
 const itemNameList = document.getElementById("pos_item_name_list");
 const itemCodeInput = document.getElementById("pos_item_code");
 const lookupPayloadInput = document.getElementById("lookup_payload");
+const sellerIdInput = document.getElementById("seller_id_search");
 
 function renderLookup(item) {
     lookupPayloadInput.value = JSON.stringify(item || {});
@@ -355,6 +416,41 @@ async function searchCustomers() {
     target.appendChild(cashButton);
 }
 
+async function lookupSalesPerson(autoSubmit = true) {
+    const sellerId = (sellerIdInput?.value || "").trim();
+    if (!sellerId) {
+        return;
+    }
+
+    const response = await fetch("/api/pos/salespeople/" + encodeURIComponent(sellerId));
+    if (!response.ok) {
+        return;
+    }
+
+    const data = await response.json();
+    const preview = document.getElementById("seller_name_preview");
+    const hiddenId = document.getElementById("seller_id_input");
+
+    if (!data.found || !data.seller) {
+        preview.value = "Not Found";
+        hiddenId.value = "";
+        sellerIdInput.focus();
+        return;
+    }
+
+    preview.value = data.seller.name || data.seller.username || "";
+    hiddenId.value = data.seller.id || "";
+
+    if (autoSubmit) {
+        document.getElementById("seller_form").submit();
+    }
+}
+
+function useCurrentCashier() {
+    document.getElementById("seller_id_input").value = "";
+    document.getElementById("seller_form").submit();
+}
+
 function togglePaymentFields() {
     const method = document.getElementById("method").value;
     document.getElementById("cash_amount_row").hidden = method === "card";
@@ -364,6 +460,34 @@ function togglePaymentFields() {
 
 itemCategory?.addEventListener("change", function () {
     loadCategoryItems(this.value);
+});
+
+sellerIdInput?.addEventListener("change", function () {
+    lookupSalesPerson();
+});
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "F4") {
+        event.preventDefault();
+        document.getElementById("pos_category")?.focus();
+    }
+
+    if (event.key === "F8") {
+        event.preventDefault();
+        document.getElementById("pos_item_code")?.focus();
+    }
+
+    if (event.key === "F2") {
+        event.preventDefault();
+        document.getElementById("cash_amount")?.focus();
+    }
+});
+
+document.getElementById("cash_amount")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && <?= $customer["id"] > 0 ? "true" : "false" ?>) {
+        event.preventDefault();
+        document.querySelector('form[action="/pos/checkout"] button[type="submit"]')?.click();
+    }
 });
 
 togglePaymentFields();

@@ -270,10 +270,12 @@ Current scope:
 - customer ledger writes
 - cash-book writes
 - receipt confirmation page
+- printable receipt page
+- barcode label selection page
+- printable barcode label page
 
 Deferred intentionally:
-- browser/printer print automation
-- barcode/warranty print actions
+- direct JSPrintManager / named-printer automation
 - temp slot compatibility features
 
 ## Current Route Coverage
@@ -343,6 +345,83 @@ Recommended legacy files to inspect next:
 - `old-code/app/printmybill.php`
 - `old-code/app/barcodeprint.php`
 - `old-code/app/c_pos_temp_*.php`
+
+## 2026-04-29 POS Print Slice
+Migrated from:
+- `old-code/app/printmybill.php`
+- `old-code/app/barcodeprint.php`
+- `old-code/app/barcode_warrenty_list.php`
+
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/Models/PosSale.php`
+- `new-code/public/barcode.php`
+- `new-code/views/layout/print.php`
+- `new-code/views/pos/receipt.php`
+- `new-code/views/pos/receipt_print.php`
+- `new-code/views/pos/barcodes.php`
+- `new-code/views/pos/barcodes_print.php`
+
+Route additions:
+- `/pos/receipts/{billnumber}`
+- `/pos/receipts/{billnumber}/print`
+- `/pos/receipts/{billnumber}/barcodes`
+- `/pos/receipts/{billnumber}/barcodes/print`
+
+Scope completed:
+- receipt reprint page from committed sale data
+- browser print handoff for receipts
+- barcode label quantity selection per sold line
+- print-friendly barcode/warranty label output using a migrated barcode image endpoint
+- receipt and barcode reprint routes no longer depend on active cashier duty, but remain permission-protected and shop-scoped
+
+## 2026-04-29 POS Slot Compatibility Slice
+Migrated from:
+- `old-code/app/pointofsale_new.php`
+- `old-code/app/c_pos_newbill.php`
+- `old-code/app/c_pos_removebill.php`
+- `old-code/app/c_pos_btn_infoview.php`
+- `old-code/app/c_pos_temp_customerupd.php`
+- `old-code/app/c_pos_temp_itemtbshow.php`
+- `old-code/app/c_pos_temp_itemtbdelete.php`
+- `old-code/app/c_pos_temp_editbeforeinfo.php`
+- `old-code/app/c_pos_temp_editposupdatedb.php`
+
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/views/pos/index.php`
+- `new-code/public/index.php`
+
+Scope completed:
+- three POS bill slots in session (`1`, `2`, `3`)
+- active slot switching without temp DB tables
+- per-slot customer, staged lines, and payment draft state
+- per-slot item count and total indicators in the sidebar
+- clear and close operations for extra slots
+- completed extra-slot checkout auto-closes the slot and returns the operator to the default slot
+
+Intentional design difference from legacy:
+- stock is not reserved or reverted during staging, edit, delete, or slot clear operations
+- stock changes remain deferred until transaction-safe checkout only
+
+## 2026-04-29 POS Deep Parity Slice
+Migrated from:
+- `old-code/app/c_small_function.php`
+- seller-selection and keyboard workflow parts of `old-code/app/pointofsale_new.php`
+
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/Models/User.php`
+- `new-code/Models/PosSale.php`
+- `new-code/views/pos/index.php`
+- `new-code/public/index.php`
+
+Scope completed:
+- sale person lookup by legacy numeric user ID
+- per-slot sale person staging in POS
+- checkout now writes staged `seller_id` and `seller_name` instead of forcing cashier identity
+- keyboard focus shortcuts for category (`F4`), code lookup (`F8`), and cash amount (`F2`)
+- cashier-entered cash field can fast-submit checkout for registered-customer bills
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

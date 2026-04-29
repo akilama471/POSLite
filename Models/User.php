@@ -66,6 +66,17 @@ class User extends Model
         return $user ?: null;
     }
 
+    public function findActiveById(int $id): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM sys_user WHERE myid = :id AND statusu = 1 LIMIT 1",
+        );
+        $stmt->execute(["id" => $id]);
+
+        $user = $stmt->fetch();
+        return $user ?: null;
+    }
+
     public function updateStatus(int $id, int $status): bool
     {
         $stmt = $this->db->prepare(
