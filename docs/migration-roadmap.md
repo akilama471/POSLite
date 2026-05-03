@@ -262,7 +262,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - customer belong/fault management
 
 ## Step 10: Reporting
-- Status: partially complete (Phase 1, 2 & 3 done: Sales, Cashier, Products)
+- Status: **COMPLETE** ✔ (all 6 phases: Sales, Cashier, Products, Entity Ledgers, GRN & Logs, Repair & Transfer)
 - Legacy sources:
   - `sys_reports.php`
   - all `reports/rpt_*.php`

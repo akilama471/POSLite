@@ -39,6 +39,60 @@ $path = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
             <a class="nav-link <?= $path === '/reports/product/stock' ? 'active' : '' ?>" href="/reports/product/stock">Comprehensive Stock Report</a>
         <?php endif; ?>
 
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Supplier Reports</div>
+        <?php if (can("p_40")): ?>
+            <a class="nav-link <?= $path === '/reports/supplier/master' ? 'active' : '' ?>" href="/reports/supplier/master">Supplier Master List</a>
+        <?php endif; ?>
+        <?php if (can("p_41")): ?>
+            <a class="nav-link <?= $path === '/reports/supplier/ledger' ? 'active' : '' ?>" href="/reports/supplier/ledger">Supplier Ledger Statement</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Customer Reports</div>
+        <?php if (can("p_43")): ?>
+            <a class="nav-link <?= $path === '/reports/customer/master' ? 'active' : '' ?>" href="/reports/customer/master">Customer Master List</a>
+        <?php endif; ?>
+        <?php if (can("p_44")): ?>
+            <a class="nav-link <?= $path === '/reports/customer/ledger' ? 'active' : '' ?>" href="/reports/customer/ledger">Customer Ledger Statement</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">User Reports</div>
+        <?php if (can("p_50")): ?>
+            <a class="nav-link <?= $path === '/reports/user/master' ? 'active' : '' ?>" href="/reports/user/master">System Users List</a>
+        <?php endif; ?>
+        <?php if (can("p_51")): ?>
+            <a class="nav-link <?= $path === '/reports/user/sales' ? 'active' : '' ?>" href="/reports/user/sales">User Sales Report</a>
+        <?php endif; ?>
+        <?php if (can("p_52")): ?>
+            <a class="nav-link <?= $path === '/reports/user/security' ? 'active' : '' ?>" href="/reports/user/security">Security Audit Log</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">GRN Reports</div>
+        <?php if (can("p_60")): ?>
+            <a class="nav-link <?= $path === '/reports/grn/list' ? 'active' : '' ?>" href="/reports/grn/list">GRN List</a>
+            <a class="nav-link <?= $path === '/reports/grn/detail' ? 'active' : '' ?>" href="/reports/grn/detail">GRN Detail Viewer</a>
+            <a class="nav-link <?= $path === '/reports/grn/reorder' ? 'active' : '' ?>" href="/reports/grn/reorder">Reorder Alert Report</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Inventory Logs</div>
+        <?php if (can("p_61")): ?>
+            <a class="nav-link <?= $path === '/reports/logs/price-edit' ? 'active' : '' ?>" href="/reports/logs/price-edit">Price Edit Log</a>
+            <a class="nav-link <?= $path === '/reports/logs/stock-edit' ? 'active' : '' ?>" href="/reports/logs/stock-edit">Stock Edit Log</a>
+            <a class="nav-link <?= $path === '/reports/logs/stock-delete' ? 'active' : '' ?>" href="/reports/logs/stock-delete">Stock Delete Log</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Repair Reports</div>
+        <?php if (can("p_30")): ?>
+            <a class="nav-link <?= $path === '/reports/repair/jobs' ? 'active' : '' ?>" href="/reports/repair/jobs">Repair Job List</a>
+            <a class="nav-link <?= $path === '/reports/repair/detail' ? 'active' : '' ?>" href="/reports/repair/detail">Job Detail Viewer</a>
+        <?php endif; ?>
+
+        <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Stock Transfer</div>
+        <?php if (can("p_63")): ?>
+            <a class="nav-link <?= $path === '/reports/transfer/list' ? 'active' : '' ?>" href="/reports/transfer/list">Transfer List</a>
+            <a class="nav-link <?= $path === '/reports/transfer/detail' ? 'active' : '' ?>" href="/reports/transfer/detail">Transfer Detail</a>
+            <a class="nav-link <?= $path === '/reports/transfer/logcheck' ? 'active' : '' ?>" href="/reports/transfer/logcheck">Item Log Check</a>
+        <?php endif; ?>
+
         <a class="nav-link" href="/dashboard" style="margin-top: 24px;">Back to Dashboard</a>
     </div>
 </aside>

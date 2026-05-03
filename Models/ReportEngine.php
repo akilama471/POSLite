@@ -351,4 +351,348 @@ class ReportEngine extends Model
 
         return $results;
     }
+
+    // ── Supplier ──────────────────────────────────────────────
+
+    public function getSupplierMaster(): array
+    {
+        $sql = "SELECT supplierid, supplier_name, supplier_address, supplier_mobile, eff_date,
+                       cash_credit_balance, accbalance
+                FROM shop_supplier ORDER BY supplier_name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getSupplierLedger(int $supplierId, string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT a.recordtime, a.op_type, a.details, a.debit, a.credit,
+                       s.supplier_name
+                FROM account_supplier a
+                LEFT JOIN shop_supplier s ON a.supplier = s.supplierid
+                WHERE a.supplier = :supplier_id
+                  AND DATE(a.recordtime) >= :from
+                  AND DATE(a.recordtime) <= :to
+                ORDER BY a.recordtime ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['supplier_id' => $supplierId, 'from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    public function getSupplierList(): array
+    {
+        $sql = "SELECT supplierid, supplier_name FROM shop_supplier ORDER BY supplier_name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    // ── Customer ──────────────────────────────────────────────
+
+    public function getCustomerMaster(): array
+    {
+        $sql = "SELECT recordid, cus_name, cus_addr, cus_mobile, add_time, accbalance
+                FROM shop_customer WHERE recordid > 0 ORDER BY cus_name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getCustomerLedger(int $customerId, string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT a.recordtime, a.details, a.debit, a.credit,
+                       c.cus_name
+                FROM account_customer a
+                LEFT JOIN shop_customer c ON a.customer = c.recordid
+                WHERE a.customer = :customer_id
+                  AND DATE(a.recordtime) >= :from
+                  AND DATE(a.recordtime) <= :to
+                ORDER BY a.recordtime ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['customer_id' => $customerId, 'from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    public function getCustomerList(): array
+    {
+        $sql = "SELECT recordid, cus_name FROM shop_customer WHERE recordid > 0 ORDER BY cus_name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    // ── User / Security ───────────────────────────────────────
+
+    public function getUserMaster(): array
+    {
+        $sql = "SELECT u.myid, u.ankaya, u.lastlogin, u.statusu,
+                       s.shop_info_name, p.privilegename
+                FROM sys_user u
+                LEFT JOIN sys_shop s ON u.shop_id = s.shopid
+                LEFT JOIN sys_privilege p ON u.privilageid = p.privilegeid
+                ORDER BY u.visibledata ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getUserSales(int $shopId, string $fromDate, string $toDate): array
+    {
+        $shopCondition = $shopId > 0 ? "AND u.shop_id = :shop_id" : "AND u.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT u.myid, u.visibledata as user_name,
+                       COUNT(b.recordid) as sale_count,
+                       COALESCE(SUM(m.sale_profit), 0) as sale_profit
+                FROM sys_user u
+                LEFT JOIN shop_pos_billdetails b 
+                    ON b.seller_id = u.myid
+                   AND DATE(b.billaddedtime) >= :from AND DATE(b.billaddedtime) <= :to
+                LEFT JOIN (
+                    SELECT billnumber, SUM((sale_price - cost) * qty) as sale_profit
+                    FROM shop_pos_mainsale GROUP BY billnumber
+                ) m ON m.billnumber = b.billnumber
+                WHERE 1=1 $shopCondition
+                GROUP BY u.myid
+                ORDER BY sale_count DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getSecurityLog(string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT l.opedate, l.operation, l.useip,
+                       u.visibledata as user_name
+                FROM log_sys_operation_1 l
+                LEFT JOIN sys_user u ON l.userid = u.myid
+                WHERE DATE(l.opedate) >= :from AND DATE(l.opedate) <= :to
+                ORDER BY l.opedate DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    // ── GRN Reports ───────────────────────────────────────────
+
+    public function getGrnList(int $shopId, string $fromDate, string $toDate): array
+    {
+        $shopCond = $shopId > 0 ? "AND g.shop_number = :shop_id" : "AND g.shop_number >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT g.grn_refno, g.suppler_name, g.operation_time,
+                       g.final_amount, g.cash_amount, g.chq_amount,
+                       s.shop_info_name
+                FROM shop_grnmain g
+                LEFT JOIN sys_shop s ON g.shop_number = s.shopid
+                WHERE DATE(g.operation_time) >= :from
+                  AND DATE(g.operation_time) <= :to
+                  $shopCond
+                ORDER BY g.operation_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnDetail(string $grnRefNo): array
+    {
+        $sqlMain = "SELECT g.*, s.shop_info_name
+                    FROM shop_grnmain g
+                    LEFT JOIN sys_shop s ON g.shop_number = s.shopid
+                    WHERE g.grn_refno = :grn_refno LIMIT 1";
+        $stmtMain = $this->db->prepare($sqlMain);
+        $stmtMain->execute(['grn_refno' => $grnRefNo]);
+        $header = $stmtMain->fetch();
+
+        $sqlItems = "SELECT i.*, sh.shop_info_name as stock_shop_name
+                     FROM shop_grnitem i
+                     LEFT JOIN sys_shop sh ON i.stock_shop = sh.shopid
+                     WHERE i.grn_refno = :grn_refno";
+        $stmtItems = $this->db->prepare($sqlItems);
+        $stmtItems->execute(['grn_refno' => $grnRefNo]);
+        $items = $stmtItems->fetchAll();
+
+        return ['header' => $header, 'items' => $items];
+    }
+
+    public function getGrnReorder(int $shopId, int $categoryId): array
+    {
+        $shopCond = $shopId > 0 ? "AND sa.shop_id = :shop_id" : "AND sa.shop_id >= 0";
+        $catCond  = $categoryId > 0 ? "AND sa.cat_id = :cat_id" : "";
+        $params = [];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($categoryId > 0) $params['cat_id'] = $categoryId;
+
+        $sql = "SELECT sa.item_id, sa.item_name, sa.alert_qty, sa.current_qty,
+                       s.shop_info_name
+                FROM stock_alert sa
+                LEFT JOIN sys_shop s ON sa.shop_id = s.shopid
+                WHERE sa.exp_time >= NOW()
+                  AND sa.alert_qty >= sa.current_qty
+                  $shopCond $catCond
+                ORDER BY sa.current_qty ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    // ── Inventory Logs ────────────────────────────────────────
+
+    public function getPriceEditLog(string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT l.row_id, l.item_name, l.reason, l.old_price, l.new_price,
+                       l.operation_time,
+                       s.shop_info_name, u.visibledata as operator_name
+                FROM price_manual_edit l
+                LEFT JOIN sys_shop s ON l.change_shop = s.shopid
+                LEFT JOIN sys_user u ON l.change_user = u.myid
+                WHERE DATE(l.operation_time) >= :from AND DATE(l.operation_time) <= :to
+                ORDER BY l.operation_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    public function getStockEditLog(string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT l.sys_remark, l.reason, l.operation_time,
+                       s.shop_info_name, u.visibledata as operator_name
+                FROM stock_edit_log l
+                LEFT JOIN sys_shop s ON l.shop_id = s.shopid
+                LEFT JOIN sys_user u ON l.operator = u.myid
+                WHERE DATE(l.operation_time) >= :from AND DATE(l.operation_time) <= :to
+                ORDER BY l.operation_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    public function getStockDeleteLog(string $fromDate, string $toDate): array
+    {
+        $sql = "SELECT l.sys_remark, l.reason, l.operation_time,
+                       s.shop_info_name, u.visibledata as operator_name
+                FROM stock_delete_log l
+                LEFT JOIN sys_shop s ON l.shop_id = s.shopid
+                LEFT JOIN sys_user u ON l.operator = u.myid
+                WHERE DATE(l.operation_time) >= :from AND DATE(l.operation_time) <= :to
+                ORDER BY l.operation_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['from' => $fromDate, 'to' => $toDate]);
+        return $stmt->fetchAll();
+    }
+
+    // ── Repair Reports ────────────────────────────────────────
+
+    public function getRepairJobs(int $shopId, string $fromDate, string $toDate, ?int $statusFilter = null): array
+    {
+        $shopCond = $shopId > 0 ? "AND j.job_inshop = :shop_id" : "AND j.job_inshop >= 0";
+        $statusCond = "";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($statusFilter !== null) {
+            $statusCond = "AND j.job_status = :status";
+            $params['status'] = $statusFilter;
+        }
+
+        $sql = "SELECT j.job_number, j.job_cus_name, j.job_cus_contac, j.job_cus_imei,
+                       j.job_fault, j.job_add_date, j.job_status,
+                       j.bill_make_time, j.handover_time,
+                       s.shop_info_name
+                FROM repair_job_list j
+                LEFT JOIN sys_shop s ON j.job_inshop = s.shopid
+                WHERE DATE(j.job_add_date) >= :from
+                  AND DATE(j.job_add_date) <= :to
+                  $shopCond $statusCond
+                ORDER BY j.job_add_date DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getRepairJobDetail(string $jobNumber): array
+    {
+        $sqlJob = "SELECT j.*, s.shop_info_name
+                   FROM repair_job_list j
+                   LEFT JOIN sys_shop s ON j.job_inshop = s.shopid
+                   WHERE j.job_number = :job_number LIMIT 1";
+        $stmtJob = $this->db->prepare($sqlJob);
+        $stmtJob->execute(['job_number' => $jobNumber]);
+        $header = $stmtJob->fetch();
+
+        $sqlLog = "SELECT l.a_item_name, l.a_item_gen_refno, l.warranty_span, l.warranty_type,
+                          l.item_sell_price, l.item_cost_price, l.record_time,
+                          u.visibledata as operator_name
+                   FROM rapair_job_log l
+                   LEFT JOIN sys_user u ON l.user_id = u.myid
+                   WHERE l.job_number = :job_number";
+        $stmtLog = $this->db->prepare($sqlLog);
+        $stmtLog->execute(['job_number' => $jobNumber]);
+        $log = $stmtLog->fetchAll();
+
+        return ['header' => $header, 'log' => $log];
+    }
+
+    // ── Stock Transfer Reports ────────────────────────────────
+
+    public function getTransferList(int $shopId, string $fromDate, string $toDate): array
+    {
+        $shopCond = $shopId > 0 ? "AND t.trans_fromshop = :shop_id" : "AND t.trans_fromshop >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT t.trans_id, t.record_time, t.total_cost, t.trans_status,
+                       s.shop_info_name as from_shop_name,
+                       u.visibledata as operator_name
+                FROM stock_transmain t
+                LEFT JOIN sys_shop s ON t.trans_fromshop = s.shopid
+                LEFT JOIN sys_user u ON t.processed_operator = u.myid
+                WHERE DATE(t.record_time) >= :from
+                  AND DATE(t.record_time) <= :to
+                  $shopCond
+                ORDER BY t.record_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getTransferDetail(string $transId): array
+    {
+        $sqlMain = "SELECT t.*, s.shop_info_name as from_shop_name, u.visibledata as operator_name
+                    FROM stock_transmain t
+                    LEFT JOIN sys_shop s ON t.trans_fromshop = s.shopid
+                    LEFT JOIN sys_user u ON t.processed_operator = u.myid
+                    WHERE t.trans_id = :trans_id LIMIT 1";
+        $stmtMain = $this->db->prepare($sqlMain);
+        $stmtMain->execute(['trans_id' => $transId]);
+        $header = $stmtMain->fetch();
+
+        $sqlItems = "SELECT l.Item_name, l.code, l.stock_count, l.part_cost, l.transfer_value,
+                            s.shop_info_name as to_shop_name
+                     FROM stock_translog l
+                     LEFT JOIN sys_shop s ON l.to_shop = s.shopid
+                     WHERE l.trans_id = :trans_id ORDER BY l.recorded_time ASC";
+        $stmtItems = $this->db->prepare($sqlItems);
+        $stmtItems->execute(['trans_id' => $transId]);
+        $items = $stmtItems->fetchAll();
+
+        return ['header' => $header, 'items' => $items];
+    }
+
+    public function getTransferLogCheck(string $itemCode): array
+    {
+        $sql = "SELECT l.trans_id, l.Item_name, l.code, l.stock_count, l.recorded_time,
+                       sf.shop_info_name as from_shop_name,
+                       st.shop_info_name as to_shop_name
+                FROM stock_translog l
+                LEFT JOIN sys_shop sf ON l.from_shop = sf.shopid
+                LEFT JOIN sys_shop st ON l.to_shop = st.shopid
+                WHERE l.code = :code
+                ORDER BY l.recorded_time ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['code' => $itemCode]);
+        return $stmt->fetchAll();
+    }
 }

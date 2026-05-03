@@ -40,6 +40,31 @@ $router->get("/reports/product/categories", "ReportController@productCategories"
 $router->get("/reports/product/items", "ReportController@productList", ["auth", "permission:p_7"]);
 $router->get("/reports/product/stock", "ReportController@productStock", ["auth", "permission:p_8"]);
 
+$router->get("/reports/supplier/master", "ReportController@supplierMaster", ["auth", "permission:p_40"]);
+$router->get("/reports/supplier/ledger", "ReportController@supplierLedger", ["auth", "permission:p_41"]);
+
+$router->get("/reports/customer/master", "ReportController@customerMaster", ["auth", "permission:p_43"]);
+$router->get("/reports/customer/ledger", "ReportController@customerLedger", ["auth", "permission:p_44"]);
+
+$router->get("/reports/user/master", "ReportController@userMaster", ["auth", "permission:p_50"]);
+$router->get("/reports/user/sales", "ReportController@userSales", ["auth", "permission:p_51"]);
+$router->get("/reports/user/security", "ReportController@userSecurity", ["auth", "permission:p_52"]);
+
+$router->get("/reports/grn/list", "ReportController@grnList", ["auth", "permission:p_60"]);
+$router->get("/reports/grn/detail", "ReportController@grnDetail", ["auth", "permission:p_60"]);
+$router->get("/reports/grn/reorder", "ReportController@grnReorder", ["auth", "permission:p_60"]);
+
+$router->get("/reports/logs/price-edit", "ReportController@logsPriceEdit", ["auth", "permission:p_61"]);
+$router->get("/reports/logs/stock-edit", "ReportController@logsStockEdit", ["auth", "permission:p_61"]);
+$router->get("/reports/logs/stock-delete", "ReportController@logsStockDelete", ["auth", "permission:p_61"]);
+
+$router->get("/reports/repair/jobs", "ReportController@repairJobList", ["auth", "permission:p_30"]);
+$router->get("/reports/repair/detail", "ReportController@repairJobDetail", ["auth", "permission:p_30"]);
+
+$router->get("/reports/transfer/list", "ReportController@transferList", ["auth", "permission:p_63"]);
+$router->get("/reports/transfer/detail", "ReportController@transferDetail", ["auth", "permission:p_63"]);
+$router->get("/reports/transfer/logcheck", "ReportController@transferLogCheck", ["auth", "permission:p_63"]);
+
 $router->post("/reports/api/fetch", "ReportController@fetch", ["auth", "permission:p_62"]);
 
 // Repair Center
