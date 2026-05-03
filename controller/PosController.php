@@ -24,6 +24,88 @@ class PosController
         unset($_SESSION["flash"]);
     }
 
+    public function dailyBills(Request $request): void
+    {
+        $auth = auth_user() ?? [];
+        $saleModel = new PosSale();
+        $userModel = new User();
+        $date = trim((string) $request->input("date", date("Y-m-d")));
+        $operatorId = (int) ($auth["user_id"] ?? 0);
+        $bills = $saleModel->dailyBills(
+            (int) ($auth["shop_id"] ?? 0),
+            $operatorId,
+            $date,
+        );
+
+        View::make("pos/daily_bills", [
+            "title" => "Daily Bills",
+            "auth" => $auth,
+            "date" => $date,
+            "bills" => $this->decorateBills($bills, $userModel),
+            "flash" => $_SESSION["flash"] ?? null,
+        ]);
+
+        unset($_SESSION["flash"]);
+    }
+
+    public function searchBills(Request $request): void
+    {
+        $auth = auth_user() ?? [];
+        $saleModel = new PosSale();
+        $userModel = new User();
+        $filters = [
+            "billnumber" => trim((string) $request->input("billnumber", "")),
+            "customer_name" => trim((string) $request->input("customer_name", "")),
+            "item_name" => trim((string) $request->input("item_name", "")),
+            "item_code" => trim((string) $request->input("item_code", "")),
+            "from_date" => trim((string) $request->input("from_date", "")),
+            "to_date" => trim((string) $request->input("to_date", "")),
+        ];
+
+        $bills = $saleModel->searchBills(
+            (int) ($auth["shop_id"] ?? 0),
+            $filters,
+        );
+
+        View::make("pos/search_bills", [
+            "title" => "Find Bill",
+            "auth" => $auth,
+            "filters" => $filters,
+            "bills" => $this->decorateBills($bills, $userModel),
+            "searched" => array_filter($filters, static fn (mixed $value): bool => trim((string) $value) !== "") !== [],
+            "flash" => $_SESSION["flash"] ?? null,
+        ]);
+
+        unset($_SESSION["flash"]);
+    }
+
+    public function cancelBill(Request $request, string $billNumber): void
+    {
+        if (!verify_csrf((string) $request->input("_token"))) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
+            redirect("/pos/bills/today");
+        }
+
+        $auth = auth_user() ?? [];
+        $saleModel = new PosSale();
+        $reason = trim((string) $request->input("reason", ""));
+
+        try {
+            $saleModel->cancelBill(
+                $billNumber,
+                (int) ($auth["shop_id"] ?? 0),
+                (int) ($auth["user_id"] ?? 0),
+                (string) ($auth["display_name"] ?? $auth["username"] ?? "User"),
+                $reason,
+            );
+            $_SESSION["flash"] = ["type" => "success", "message" => "Bill " . $billNumber . " was cancelled successfully."];
+        } catch (Throwable $exception) {
+            $_SESSION["flash"] = ["type" => "error", "message" => $exception->getMessage()];
+        }
+
+        redirect("/pos/bills/today");
+    }
+
     public function switchSlot(Request $request, string $slot): void
     {
         $slotId = $this->normalizeSlot($slot);
@@ -363,12 +445,7 @@ class PosController
 
         $activeSlot = $this->activeSlot();
         $cart = $this->cart($activeSlot);
-        $cart["payment"] = [
-            "method" => (string) $request->input("method", "cash"),
-            "cash_amount" => max(0, (float) $request->input("cash_amount", 0)),
-            "card_amount" => max(0, (float) $request->input("card_amount", 0)),
-            "card_number" => trim((string) $request->input("card_number", "")),
-        ];
+        $cart["payment"] = $this->paymentFromRequest($request);
         $this->storeCart($activeSlot, $cart);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Payment details staged for this bill."];
@@ -384,6 +461,10 @@ class PosController
 
         $auth = auth_user() ?? [];
         $activeSlot = $this->activeSlot();
+        $cart = $this->cart($activeSlot);
+
+        $cart["payment"] = $this->paymentFromRequest($request, $cart["payment"] ?? []);
+        $this->storeCart($activeSlot, $cart);
         $cart = $this->cart($activeSlot);
 
         if (($cart["lines"] ?? []) === []) {
@@ -582,6 +663,31 @@ class PosController
             "paid" => $cash + $card,
             "balance" => ($cash + $card) - $total,
         ];
+    }
+
+    private function paymentFromRequest(Request $request, array $fallback = []): array
+    {
+        $method = strtolower(trim((string) $request->input("method", (string) ($fallback["method"] ?? "cash"))));
+
+        if (!in_array($method, ["cash", "card", "split"], true)) {
+            $method = "cash";
+        }
+
+        $payment = [
+            "method" => $method,
+            "cash_amount" => max(0, (float) $request->input("cash_amount", $fallback["cash_amount"] ?? 0)),
+            "card_amount" => max(0, (float) $request->input("card_amount", $fallback["card_amount"] ?? 0)),
+            "card_number" => trim((string) $request->input("card_number", (string) ($fallback["card_number"] ?? ""))),
+        ];
+
+        if ($method === "cash") {
+            $payment["card_amount"] = 0.0;
+            $payment["card_number"] = "";
+        } elseif ($method === "card") {
+            $payment["cash_amount"] = 0.0;
+        }
+
+        return $payment;
     }
 
     private function validateCheckout(array $cart): ?string
@@ -828,5 +934,16 @@ class PosController
     {
         http_response_code(404);
         View::make("errors/404", ["title" => "Receipt Not Found"]);
+    }
+
+    private function decorateBills(array $bills, User $userModel): array
+    {
+        foreach ($bills as &$bill) {
+            $operator = $userModel->findById((int) ($bill["operator"] ?? 0));
+            $bill["cashier_name"] = (string) ($operator["visibledata"] ?? $operator["ankaya"] ?? "");
+        }
+        unset($bill);
+
+        return $bills;
     }
 }

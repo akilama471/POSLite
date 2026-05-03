@@ -19,6 +19,15 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
             <h3>POS</h3>
             <div class="nav-group">
                 <a class="nav-link" href="/pos">New Bill</a>
+                <?php if (can("p_31")): ?>
+                    <a class="nav-link" href="/pos/bills/today">Daily Bills</a>
+                <?php endif; ?>
+                <?php if (can("p_32")): ?>
+                    <a class="nav-link" href="/pos/bills/search">Find Bill</a>
+                <?php endif; ?>
+                <?php if (can("p_34")): ?>
+                    <a class="nav-link" href="/pos/returns/pending">Pending Returns</a>
+                <?php endif; ?>
                 <a class="nav-link" href="/cashier">Cashier Duty</a>
                 <a class="nav-link" href="/dashboard">Back to Dashboard</a>
             </div>
@@ -29,6 +38,10 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
                 <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
                     <a class="btn btn-primary" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/print" target="_blank" rel="noopener">Print Receipt</a>
                     <a class="btn" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/barcodes" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041;">Barcode Labels</a>
+                    <?php if (can("p_33")): ?>
+                        <a class="btn" href="/pos/bills/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/returns/create" style="background:#eef2f5; color:#163041;">Create Return</a>
+                        <a class="btn" href="/pos/bills/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/returns" style="background:#eef2f5; color:#163041;">Return History</a>
+                    <?php endif; ?>
                     <a class="btn" href="/pos" style="background:#fbe4de; color:#8f2d15;">Start New Bill</a>
                 </div>
 

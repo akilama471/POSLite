@@ -457,6 +457,201 @@ Scope completed:
 - prevents duplicate IMEIs across the current user's open POS slots
 - adds matched IMEIs directly into the active bill without temp bulk tables
 
+## 2026-04-29 POS Fast Entry Slice
+Migrated from:
+- item-entry speed and validation parts of `old-code/app/pointofsale_new.php`
+
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- code lookup `Enter` now triggers direct lookup
+- item-name `Enter` and change now trigger direct lookup
+- successful lookups shift focus forward through the cashier flow
+- add-to-bill now validates selected item, quantity, stock limit, sale price, and discount before submit
+- IMEI items with quantity greater than `1` branch directly into bulk IMEI flow instead of failing late
+- under-cost selling now prompts the operator before staging the line
+
+## 2026-04-29 POS Inline Status Slice
+Migrated from:
+- cashier workflow polish expectations from `old-code/app/pointofsale_new.php`
+
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- replaced the main client-side interruptive `alert()` path with inline POS status feedback
+- item lookup, seller lookup, customer search, bulk IMEI open, and fast cash checkout now report status in-page
+- customer search fields now submit on `Enter`
+- payment method focus shortcut `F9` is now restored in the MVC POS screen
+- under-cost warning and draft validation now stay inside the POS workspace instead of bouncing the cashier through modal browser prompts
+
+## 2026-04-30 POS Shortcut Cleanup Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- seller ID lookup now submits on `Enter`
+- card-number field can fast-stage payment details on `Enter`
+- `F5` now points the cashier back toward current-bill reset instead of doing nothing
+
+## 2026-04-30 POS Sidebar Cleanup Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- cleaned the bill-slot summary separator rendering in the POS sidebar
+- normalized the slot summary display to stable ASCII separators
+- removed the visible encoding artifact from the slot summary text
+
+## 2026-04-30 POS Payment Flow Parity Slice
+Implemented in:
+- `new-code/controller/PosController.php`
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- checkout now consumes the current live payment draft instead of relying only on a previously staged payment snapshot
+- restored live cashier-facing payment math for total, paid amount, and change or balance display
+- added exact-cash fast fill for the current bill total
+- added client-side finish-bill validation for cash, card, split, and cash-customer full-payment rules before checkout submit
+- cash-amount Enter fast path now uses the live payment draft and can finish the bill directly when validation passes
+
+## 2026-04-30 POS Customer Shortcut Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- restored direct POS-side customer quick actions for cash-customer reset and new-customer launch
+- added permission-aware `Add New Customer` and `Manage Customers` links from the POS workspace
+- added `F6` customer-search focus so the cashier can jump back into customer selection faster
+
+## 2026-04-30 POS Customer Result Speed Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- customer search results now expose numbered fast-select labels for the first matches
+- number keys `1-9` can now pick customer matches directly from the keyboard
+- the first matched customer now receives focus automatically after search for quicker Enter-based selection
+- customer-result handling now uses a shared POS-side selector path instead of duplicating submit logic
+
+## 2026-04-30 POS Seller Shortcut Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- added `F7` seller focus shortcut in the POS workspace
+- seller lookup now treats blank or `0` as a direct reset back to the current cashier
+- seller preview now reflects current-cashier reset immediately before the slot update posts
+- seller section now documents the fast reset path for cashier use
+
+## 2026-05-03 POS Shortcut Scope Cleanup Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- restricted numeric customer fast-select keys so they only fire while the cashier is actively in customer-selection context
+- removed the risk of customer shortcut digits hijacking quantity, price, or payment entry elsewhere in the POS screen
+
+## 2026-05-03 POS Item Entry Focus Slice
+Implemented in:
+- `new-code/views/pos/index.php`
+
+Scope completed:
+- category change now pushes focus into item-name selection when category items are loaded
+- successful item-name and code lookups now select the next cashier input field for faster overwrite and confirmation
+- discount field `Enter` now follows the same fast add-to-bill path as sale price
+- main-screen `Escape` now clears the current lookup draft and returns focus to code lookup without disturbing bill lines
+
+## 2026-05-03 POS Bill History Slice
+Implemented in:
+- `new-code/Models/PosSale.php`
+- `new-code/controller/PosController.php`
+- `new-code/public/index.php`
+- `new-code/views/pos/daily_bills.php`
+- `new-code/views/pos/search_bills.php`
+- `new-code/views/pos/index.php`
+- `new-code/views/pos/receipt.php`
+- `new-code/views/pos/barcodes.php`
+
+Scope completed:
+- migrated daily-bill history into `GET /pos/bills/today` using committed MVC bill data
+- migrated bill search into `GET /pos/bills/search` with bill-data and item-data filters
+- wired receipt, bill reprint, and barcode reprint links from the new history/search screens
+- added POS navigation links for daily bills and find bill when the user has `p_31` or `p_32`
+
+Deferred in this slice:
+- legacy bill-cancel flow from `c_bilcancel.php`
+- legacy bill-return activity links from `search_bill.php` and `dailybills.php`
+
+## 2026-05-03 POS Bill Cancel Slice
+Implemented in:
+- `new-code/Models/PosSale.php`
+- `new-code/controller/PosController.php`
+- `new-code/public/index.php`
+- `new-code/views/pos/daily_bills.php`
+
+Scope completed:
+- added transactional bill cancel handling at `POST /pos/bills/{billnumber}/cancel`
+- scoped cancel actions to the current cashier's own daily bills, matching the legacy daily-bill removal boundary
+- bill cancel now archives the bill into legacy cancel tables, restores stock, removes customer bill-payment ledger links, records reversing cash-book entries, and deletes the live bill rows
+- daily bills now include a required cancel-reason form with confirmation before running the rollback
+
+Runtime assumptions:
+- legacy tables `cancel_bill_billdetails` and `cancel_bill_mainsale` exist with the expected column layout
+- stock restoration still depends on the same legacy stock-row lookup patterns used by the old codebase
+
+## 2026-05-03 POS Return Visibility Slice
+Implemented in:
+- `new-code/Models/BillReturn.php`
+- `new-code/controller/BillReturnController.php`
+- `new-code/public/index.php`
+- `new-code/views/pos/return_history.php`
+- `new-code/views/pos/return_pending.php`
+- `new-code/views/pos/daily_bills.php`
+- `new-code/views/pos/search_bills.php`
+- `new-code/views/pos/receipt.php`
+
+Scope completed:
+- added bill return history view at `GET /pos/bills/{billnumber}/returns`
+- added pending return-activity queue view at `GET /pos/returns/pending`
+- surfaced legacy `alter_bill_*` and `alter_bill_information` records from MVC bill pages
+- linked return history from daily bills, bill search, and receipt pages when the user has `p_33`
+- linked pending return activity queue when the user has `p_34`
+
+Deferred in this slice:
+- write-side bill return creation from `bill_return.php`
+- write-side return-activity processing from `return_cus_activity.php` and `c_bilretactivity_*`
+
+## 2026-05-03 POS Return Request Slice
+Migrated from:
+- `old-code/app/bill_return.php`
+
+Implemented in:
+- `new-code/Models/BillReturn.php`
+- `new-code/controller/BillReturnController.php`
+- `new-code/public/index.php`
+- `new-code/views/pos/return_create.php`
+- `new-code/views/pos/daily_bills.php`
+- `new-code/views/pos/search_bills.php`
+- `new-code/views/pos/receipt.php`
+
+Scope completed:
+- added return-request entry form at `GET /pos/bills/{billnumber}/returns/create`
+- added return-request submit flow at `POST /pos/bills/{billnumber}/returns`
+- validates selected bill lines, return quantities, and IMEI single-quantity constraints before writing
+- blocks duplicate pending return queues for the same bill
+- writes staged return rows into legacy `alter_bill_mainsale`
+- writes return event headers into legacy `alter_bill_billdata`
+- updates the live bill `alter_bill` flag on successful request creation
+- restores stock immediately for re-sell return lines using the same legacy stock-table families
+- writes `stock_return_log` rows for both re-sell and discard return paths
+- linked `Create Return` entry points from daily bills, bill search, and receipt pages when the user has `p_33`
+
+Deferred in this slice:
+- follow-up processing from `return_cus_activity.php`
+- `c_bilretactivity_*` operational decisions after the return request is queued
+
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
   - controller

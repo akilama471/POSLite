@@ -16,6 +16,12 @@ $shopName = $shop["shop_info_name"] ?? $shop["shopname"] ?? "";
             <h3>POS</h3>
             <div class="nav-group">
                 <a class="nav-link" href="/pos">Current Bill</a>
+                <?php if (can("p_31")): ?>
+                    <a class="nav-link" href="/pos/bills/today">Daily Bills</a>
+                <?php endif; ?>
+                <?php if (can("p_32")): ?>
+                    <a class="nav-link" href="/pos/bills/search">Find Bill</a>
+                <?php endif; ?>
                 <a class="nav-link active" href="/pos/receipts/<?= htmlspecialchars($billNumber, ENT_QUOTES, "UTF-8") ?>/barcodes">Barcode Labels</a>
                 <a class="nav-link" href="/pos/receipts/<?= htmlspecialchars($billNumber, ENT_QUOTES, "UTF-8") ?>">Back To Receipt</a>
             </div>

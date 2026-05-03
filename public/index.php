@@ -29,6 +29,13 @@ $router->post("/pos/items/{id}/delete", "PosController@removeLine", ["auth", "pe
 $router->post("/pos/reset", "PosController@resetCart", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/payment", "PosController@updatePayment", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/checkout", "PosController@checkout", ["auth", "permission:p_2", "cashier"]);
+$router->get("/pos/bills/today", "PosController@dailyBills", ["auth", "permission:p_31"]);
+$router->post("/pos/bills/{billnumber}/cancel", "PosController@cancelBill", ["auth", "permission:p_31"]);
+$router->get("/pos/bills/search", "PosController@searchBills", ["auth", "permission:p_32"]);
+$router->get("/pos/bills/{billnumber}/returns/create", "BillReturnController@create", ["auth", "permission:p_33"]);
+$router->post("/pos/bills/{billnumber}/returns", "BillReturnController@store", ["auth", "permission:p_33"]);
+$router->get("/pos/bills/{billnumber}/returns", "BillReturnController@history", ["auth", "permission:p_33"]);
+$router->get("/pos/returns/pending", "BillReturnController@pending", ["auth", "permission:p_34"]);
 $router->get("/pos/receipts/{billnumber}", "PosController@receipt", ["auth", "permission:p_2"]);
 $router->get("/pos/receipts/{billnumber}/print", "PosController@printReceipt", ["auth", "permission:p_2"]);
 $router->get("/pos/receipts/{billnumber}/barcodes", "PosController@barcodeLabels", ["auth", "permission:p_2"]);

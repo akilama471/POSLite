@@ -1,0 +1,4 @@
+interface:
+  display_name: "Custom PHP POS MVC"
+  short_description: "Laravel-like custom MVC for POS and ecommerce."
+  default_prompt: "Use $custom-php-pos-ecommerce to design or implement a secure Laravel-like PHP POS/ecommerce system."

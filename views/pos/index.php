@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $cart = is_array($cart ?? null) ? $cart : [];
 $customer = $cart["customer"] ?? ["id" => 0, "name" => "Cash Customer"];
 $seller = $cart["seller"] ?? ["id" => 0, "name" => ""];
@@ -25,6 +25,12 @@ $formatMoney = static function (mixed $value): string {
             <h3>POS</h3>
             <div class="nav-group">
                 <a class="nav-link active" href="/pos">Current Bill</a>
+                <?php if (can("p_31")): ?>
+                    <a class="nav-link" href="/pos/bills/today">Daily Bills</a>
+                <?php endif; ?>
+                <?php if (can("p_32")): ?>
+                    <a class="nav-link" href="/pos/bills/search">Find Bill</a>
+                <?php endif; ?>
                 <a class="nav-link" href="/cashier">Cashier Duty</a>
                 <a class="nav-link" href="/dashboard">Back to Dashboard</a>
             </div>
@@ -45,8 +51,8 @@ $formatMoney = static function (mixed $value): string {
                         </div>
                         <div class="muted" style="margin-top:6px; color:#c8d4db;">
                             <?= htmlspecialchars((string) $slotState["customer_name"], ENT_QUOTES, "UTF-8") ?>
-                            · <?= $itemCount ?> item(s)
-                            · <?= htmlspecialchars($formatMoney($slotState["total"]), ENT_QUOTES, "UTF-8") ?>
+                            | <?= $itemCount ?> item(s)
+                            | <?= htmlspecialchars($formatMoney($slotState["total"]), ENT_QUOTES, "UTF-8") ?>
                         </div>
                     </a>
                 <?php endforeach; ?>
@@ -55,6 +61,8 @@ $formatMoney = static function (mixed $value): string {
 
         <main class="page">
             <?php require BASE_PATH . "/views/settings/_flash.php"; ?>
+
+            <div id="pos_status" class="alert" hidden style="margin-bottom:18px;"></div>
 
             <section class="card" style="margin-bottom:18px;">
                 <div class="grid" style="grid-template-columns: minmax(240px, 1fr) auto;">
@@ -98,6 +106,17 @@ $formatMoney = static function (mixed $value): string {
                     </div>
                 </div>
 
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+                    <button class="btn" type="button" onclick="useCashCustomerQuick()" style="background:#eef2f5; color:#163041;">Use Cash Customer</button>
+                    <?php if (can("p_36")): ?>
+                        <a class="btn" href="/customers/create" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041; text-decoration:none;">Add New Customer</a>
+                    <?php endif; ?>
+                    <?php if (can("p_37")): ?>
+                        <a class="btn" href="/customers" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041; text-decoration:none;">Manage Customers</a>
+                    <?php endif; ?>
+                </div>
+
+                <div class="muted" id="customer_search_hint" style="margin-top:12px;">Search by customer name or mobile, then select the matched record.</div>
                 <div id="customer_results" class="stack" style="margin-top:16px;"></div>
 
                 <form method="POST" action="/pos/customer" id="customer_form" style="display:none;">
@@ -123,6 +142,7 @@ $formatMoney = static function (mixed $value): string {
                         <button class="btn" type="button" onclick="useCurrentCashier()" style="background:#eef2f5; color:#163041;">Use Current Cashier</button>
                     </div>
                 </div>
+                <div class="muted" style="margin-top:12px;">Press `F7` to jump here. Enter `0` to reset the seller back to the current cashier.</div>
 
                 <form method="POST" action="/pos/seller" id="seller_form" style="display:none;">
                     <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
@@ -194,6 +214,8 @@ $formatMoney = static function (mixed $value): string {
                         </div>
                     </div>
 
+                    <div class="muted" id="lookup_hint" style="margin-top:12px;">Select an item by name or code, then confirm quantity and price before adding it to the bill.</div>
+
                     <div style="margin-top:16px;">
                         <div style="display:flex; gap:12px; flex-wrap:wrap;">
                             <button class="btn btn-primary" type="submit">Add To Bill</button>
@@ -264,7 +286,7 @@ $formatMoney = static function (mixed $value): string {
 
             <section class="card">
                 <h2 class="section-title">Payment Draft</h2>
-                <form method="POST" action="/pos/payment">
+                <form method="POST" action="/pos/payment" id="payment_draft_form">
                     <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
                     <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items:end;">
                         <div class="form-row">
@@ -289,11 +311,25 @@ $formatMoney = static function (mixed $value): string {
                         </div>
                     </div>
 
-                    <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:16px;">
+                    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:16px;">
+                        <div class="card" style="margin:0; padding:14px 16px; background:#f7fafc;">
+                            <div class="muted">Need To Pay</div>
+                            <strong id="payment_total_live"><?= htmlspecialchars($formatMoney($summary["total"] ?? 0), ENT_QUOTES, "UTF-8") ?></strong>
+                        </div>
+                        <div class="card" style="margin:0; padding:14px 16px; background:#f7fafc;">
+                            <div class="muted">Paid Amount</div>
+                            <strong id="payment_paid_live"><?= htmlspecialchars($formatMoney($summary["paid"] ?? 0), ENT_QUOTES, "UTF-8") ?></strong>
+                        </div>
+                        <div class="card" style="margin:0; padding:14px 16px; background:#f7fafc;">
+                            <div class="muted" id="payment_balance_label"><?= (int) ($customer["id"] ?? 0) > 0 ? "Balance / Credit" : "Change / Due" ?></div>
+                            <strong id="payment_balance_live"><?= htmlspecialchars($formatMoney($summary["balance"] ?? 0), ENT_QUOTES, "UTF-8") ?></strong>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:16px;">
                         <button class="btn btn-primary" type="submit">Stage Payment Details</button>
-                        <span><strong>Total:</strong> <?= htmlspecialchars($formatMoney($summary["total"] ?? 0), ENT_QUOTES, "UTF-8") ?></span>
-                        <span><strong>Paid:</strong> <?= htmlspecialchars($formatMoney($summary["paid"] ?? 0), ENT_QUOTES, "UTF-8") ?></span>
-                        <span><strong>Balance:</strong> <?= htmlspecialchars($formatMoney($summary["balance"] ?? 0), ENT_QUOTES, "UTF-8") ?></span>
+                        <button class="btn" type="button" id="exact_cash_button" style="background:#eef2f5; color:#163041;">Exact Cash</button>
+                        <span class="muted" id="payment_flow_hint">Live payment totals update as the cashier types. Finish Bill now uses the current draft values directly.</span>
                     </div>
                 </form>
 
@@ -301,7 +337,11 @@ $formatMoney = static function (mixed $value): string {
 
                 <form method="POST" action="/pos/checkout" style="margin-top:16px;">
                     <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
-                    <button class="btn btn-primary" type="submit" <?= $lines === [] ? "disabled" : "" ?>>Finish Bill</button>
+                    <input type="hidden" name="method" id="checkout_method" value="<?= htmlspecialchars((string) ($payment["method"] ?? "cash"), ENT_QUOTES, "UTF-8") ?>">
+                    <input type="hidden" name="cash_amount" id="checkout_cash_amount" value="<?= htmlspecialchars((string) ($payment["cash_amount"] ?? 0), ENT_QUOTES, "UTF-8") ?>">
+                    <input type="hidden" name="card_amount" id="checkout_card_amount" value="<?= htmlspecialchars((string) ($payment["card_amount"] ?? 0), ENT_QUOTES, "UTF-8") ?>">
+                    <input type="hidden" name="card_number" id="checkout_card_number" value="<?= htmlspecialchars((string) ($payment["card_number"] ?? ""), ENT_QUOTES, "UTF-8") ?>">
+                    <button class="btn btn-primary" id="finish_bill_button" type="submit" <?= $lines === [] ? "disabled" : "" ?>>Finish Bill</button>
                 </form>
             </section>
 
@@ -403,6 +443,181 @@ const lookupPayloadInput = document.getElementById("lookup_payload");
 const sellerIdInput = document.getElementById("seller_id_search");
 const editModal = document.getElementById("line_edit_modal");
 const bulkImeiModal = document.getElementById("bulk_imei_modal");
+const addItemForm = document.getElementById("add_item_form");
+const posStatus = document.getElementById("pos_status");
+const paymentDraftForm = document.getElementById("payment_draft_form");
+const checkoutForm = document.querySelector('form[action="/pos/checkout"]');
+const totalDue = <?= json_encode((float) ($summary["total"] ?? 0)) ?>;
+const hasRegisteredCustomer = <?= (int) ($customer["id"] ?? 0) > 0 ? "true" : "false" ?>;
+let customerResultButtons = [];
+
+function formatMoney(value) {
+    return "Rs. " + Number(value || 0).toFixed(2);
+}
+
+function paymentMethodValue() {
+    return document.getElementById("method")?.value || "cash";
+}
+
+function paymentAmounts() {
+    return {
+        method: paymentMethodValue(),
+        cash: Number(document.getElementById("cash_amount")?.value || 0),
+        card: Number(document.getElementById("card_amount")?.value || 0),
+        cardNumber: (document.getElementById("card_number")?.value || "").trim(),
+    };
+}
+
+function setPosStatus(message, type = "info") {
+    if (!posStatus) {
+        return;
+    }
+
+    posStatus.hidden = false;
+    posStatus.textContent = message;
+    posStatus.className = "alert";
+
+    if (type === "error") {
+        posStatus.classList.add("alert-error");
+        posStatus.style.background = "";
+        posStatus.style.color = "";
+        posStatus.style.border = "";
+        return;
+    }
+
+    if (type === "success") {
+        posStatus.style.background = "#e8f6ef";
+        posStatus.style.color = "#146b4f";
+        posStatus.style.border = "1px solid #bde4d0";
+        return;
+    }
+
+    posStatus.style.background = "#eef5fb";
+    posStatus.style.color = "#17415c";
+    posStatus.style.border = "1px solid #c9deee";
+}
+
+function clearPosStatus() {
+    if (!posStatus) {
+        return;
+    }
+
+    posStatus.hidden = true;
+    posStatus.textContent = "";
+}
+
+function selectCustomerResult(customerId, customerName) {
+    document.getElementById("customer_id_input").value = customerId || 0;
+    document.getElementById("customer_name_input").value = customerName || "Cash Customer";
+    document.getElementById("customer_form").submit();
+}
+
+function customerSelectionContextActive() {
+    const active = document.activeElement;
+    const customerResults = document.getElementById("customer_results");
+
+    if (!active) {
+        return false;
+    }
+
+    return active.id === "customer_name_search"
+        || active.id === "customer_mobile_search"
+        || (customerResults ? customerResults.contains(active) : false);
+}
+
+function syncCheckoutPaymentInputs() {
+    const payment = paymentAmounts();
+    document.getElementById("checkout_method").value = payment.method;
+    document.getElementById("checkout_cash_amount").value = String(payment.cash);
+    document.getElementById("checkout_card_amount").value = String(payment.card);
+    document.getElementById("checkout_card_number").value = payment.cardNumber;
+}
+
+function refreshPaymentDraftSummary() {
+    const payment = paymentAmounts();
+    const paid = payment.cash + payment.card;
+    const balance = paid - totalDue;
+    const label = hasRegisteredCustomer ? "Balance / Credit" : "Change / Due";
+    const flowHint = document.getElementById("payment_flow_hint");
+
+    document.getElementById("payment_total_live").textContent = formatMoney(totalDue);
+    document.getElementById("payment_paid_live").textContent = formatMoney(paid);
+    document.getElementById("payment_balance_label").textContent = label;
+    document.getElementById("payment_balance_live").textContent = formatMoney(balance);
+
+    if (!flowHint) {
+        syncCheckoutPaymentInputs();
+        return;
+    }
+
+    if (!hasRegisteredCustomer && paid < totalDue) {
+        flowHint.textContent = "Cash customer bills must be fully paid before Finish Bill can proceed.";
+    } else if (payment.method !== "cash" && payment.cardNumber === "") {
+        flowHint.textContent = "Card and split payments need a card number before checkout.";
+    } else {
+        flowHint.textContent = "Live payment totals update as the cashier types. Finish Bill now uses the current draft values directly.";
+    }
+
+    syncCheckoutPaymentInputs();
+}
+
+function validateCheckoutDraft(showStatus = true) {
+    const payment = paymentAmounts();
+    const paid = payment.cash + payment.card;
+    const balance = paid - totalDue;
+
+    if (payment.method === "cash" && payment.cash <= 0) {
+        if (showStatus) {
+            setPosStatus("Cash amount is required before finishing the bill.", "error");
+            document.getElementById("cash_amount")?.focus();
+        }
+        return false;
+    }
+
+    if (payment.method === "card" && (payment.card <= 0 || payment.cardNumber === "")) {
+        if (showStatus) {
+            setPosStatus("Card amount and card number are required before checkout.", "error");
+            if (payment.card <= 0) {
+                document.getElementById("card_amount")?.focus();
+            } else {
+                document.getElementById("card_number")?.focus();
+            }
+        }
+        return false;
+    }
+
+    if (payment.method === "split" && (paid <= 0 || payment.cardNumber === "")) {
+        if (showStatus) {
+            setPosStatus("Split payment needs payment values and a card number before checkout.", "error");
+            if (paid <= 0) {
+                document.getElementById("cash_amount")?.focus();
+            } else {
+                document.getElementById("card_number")?.focus();
+            }
+        }
+        return false;
+    }
+
+    if (!hasRegisteredCustomer && balance < 0) {
+        if (showStatus) {
+            setPosStatus("Cash customer bills need full payment before checkout.", "error");
+            document.getElementById("cash_amount")?.focus();
+        }
+        return false;
+    }
+
+    if (showStatus) {
+        if (hasRegisteredCustomer && balance < 0) {
+            setPosStatus("Registered customer bill is ready. Remaining balance will stay on account.", "info");
+        } else if (balance > 0) {
+            setPosStatus("Payment exceeds the bill total. Change is ready to return.", "success");
+        } else {
+            setPosStatus("Payment draft is ready for checkout.", "success");
+        }
+    }
+
+    return true;
+}
 
 function renderLookup(item) {
     lookupPayloadInput.value = JSON.stringify(item || {});
@@ -413,7 +628,31 @@ function renderLookup(item) {
     document.getElementById("qty").value = item?.type === "2" ? "1" : "1";
     document.getElementById("discount").value = "0";
     document.getElementById("warranty").value = item?.warranty || "";
+    document.getElementById("lookup_hint").textContent = item?.item_id
+        ? "Selected stock is ready. Press Enter from qty or sale price to continue quickly."
+        : (item?.name || "No stock match found for the current lookup.");
+    if (item?.item_id) {
+        setPosStatus("Stock item selected: " + (item.name || "Item") + ".", "success");
+    } else if (item?.name) {
+        setPosStatus(item.name, "error");
+    }
     syncBulkImeiButton(item);
+}
+
+function clearLookupDraft(keepCode = false) {
+    lookupPayloadInput.value = "{}";
+    document.getElementById("lookup_name").value = "";
+    document.getElementById("lookup_stock").value = "";
+    document.getElementById("lookup_cost").value = "";
+    document.getElementById("sale_price").value = "";
+    document.getElementById("qty").value = "1";
+    document.getElementById("discount").value = "0";
+    document.getElementById("warranty").value = "";
+    document.getElementById("lookup_hint").textContent = "Select an item by name or code, then confirm quantity and price before adding it to the bill.";
+    if (!keepCode) {
+        itemCodeInput.value = "";
+    }
+    syncBulkImeiButton();
 }
 
 async function loadCategoryItems(categoryName) {
@@ -432,9 +671,16 @@ async function loadCategoryItems(categoryName) {
         option.value = name;
         itemNameList.appendChild(option);
     }
+
+    if (items.length > 0) {
+        window.setTimeout(function () {
+            itemNameInput?.focus();
+        }, 0);
+    }
 }
 
 async function lookupItemByName() {
+    clearPosStatus();
     const response = await fetch("/pos/lookup/name", {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -445,9 +691,16 @@ async function lookupItemByName() {
     }
     const data = await response.json();
     renderLookup(data.item || {});
+    if (data.found) {
+        document.getElementById("qty")?.focus();
+        document.getElementById("qty")?.select();
+    } else {
+        itemNameInput.focus();
+    }
 }
 
 async function lookupItemByCode() {
+    clearPosStatus();
     const response = await fetch("/pos/lookup/code", {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -458,9 +711,16 @@ async function lookupItemByCode() {
     }
     const data = await response.json();
     renderLookup(data.item || {});
+    if (data.found) {
+        document.getElementById("sale_price")?.focus();
+        document.getElementById("sale_price")?.select();
+    } else {
+        itemCodeInput.select();
+    }
 }
 
 async function searchCustomers() {
+    clearPosStatus();
     const response = await fetch("/api/pos/customers", {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -476,10 +736,19 @@ async function searchCustomers() {
     const data = await response.json();
     const target = document.getElementById("customer_results");
     target.innerHTML = "";
+    customerResultButtons = [];
+    document.getElementById("customer_search_hint").textContent = "Select a matched customer or keep the bill under Cash Customer.";
 
     const ids = data[0] || [];
     const names = data[1] || [];
     const mobiles = data[2] || [];
+
+    if (names.length === 0) {
+        setPosStatus("No customer matched the current search.", "error");
+        return;
+    }
+
+    setPosStatus("Customer matches loaded. Use Enter on a result or number keys 1-9 for the first matches.", "info");
 
     for (let i = 0; i < names.length; i++) {
         const button = document.createElement("button");
@@ -488,13 +757,13 @@ async function searchCustomers() {
         button.style.textAlign = "left";
         button.style.background = "#eef2f5";
         button.style.color = "#163041";
-        button.textContent = names[i] + (mobiles[i] ? " (" + mobiles[i] + ")" : "");
+        button.textContent = (i < 9 ? "[" + (i + 1) + "] " : "") + names[i] + (mobiles[i] ? " (" + mobiles[i] + ")" : "");
+        button.dataset.customerIndex = String(i + 1);
         button.onclick = function () {
-            document.getElementById("customer_id_input").value = ids[i] || 0;
-            document.getElementById("customer_name_input").value = names[i] || "Cash Customer";
-            document.getElementById("customer_form").submit();
+            selectCustomerResult(ids[i] || 0, names[i] || "Cash Customer");
         };
         target.appendChild(button);
+        customerResultButtons.push(button);
     }
 
     const cashButton = document.createElement("button");
@@ -505,16 +774,32 @@ async function searchCustomers() {
     cashButton.style.color = "#163041";
     cashButton.textContent = "Use Cash Customer";
     cashButton.onclick = function () {
-        document.getElementById("customer_id_input").value = 0;
-        document.getElementById("customer_name_input").value = "Cash Customer";
-        document.getElementById("customer_form").submit();
+        selectCustomerResult(0, "Cash Customer");
     };
     target.appendChild(cashButton);
+    customerResultButtons.push(cashButton);
+
+    if (customerResultButtons[0]) {
+        window.setTimeout(function () {
+            customerResultButtons[0]?.focus();
+        }, 0);
+    }
+}
+
+function useCashCustomerQuick() {
+    setPosStatus("Bill was reset to Cash Customer.", "info");
+    selectCustomerResult(0, "Cash Customer");
 }
 
 async function lookupSalesPerson(autoSubmit = true) {
     const sellerId = (sellerIdInput?.value || "").trim();
     if (!sellerId) {
+        useCurrentCashier();
+        return;
+    }
+
+    if (Number(sellerId) === 0) {
+        useCurrentCashier();
         return;
     }
 
@@ -530,12 +815,14 @@ async function lookupSalesPerson(autoSubmit = true) {
     if (!data.found || !data.seller) {
         preview.value = "Not Found";
         hiddenId.value = "";
+        setPosStatus("Sale person ID was not matched to an active user.", "error");
         sellerIdInput.focus();
         return;
     }
 
     preview.value = data.seller.name || data.seller.username || "";
     hiddenId.value = data.seller.id || "";
+    setPosStatus("Sale person matched: " + preview.value + ".", "success");
 
     if (autoSubmit) {
         document.getElementById("seller_form").submit();
@@ -543,7 +830,12 @@ async function lookupSalesPerson(autoSubmit = true) {
 }
 
 function useCurrentCashier() {
+    if (sellerIdInput) {
+        sellerIdInput.value = "0";
+    }
+    document.getElementById("seller_name_preview").value = "Current Cashier";
     document.getElementById("seller_id_input").value = "";
+    setPosStatus("Sale person reset to the current cashier.", "info");
     document.getElementById("seller_form").submit();
 }
 
@@ -575,6 +867,69 @@ function syncBulkImeiButton(item = null) {
     button.hidden = !(selectedItem?.type === "2" && qty > 1);
 }
 
+function validateDraftBeforeAdd() {
+    const item = JSON.parse(lookupPayloadInput.value || "{}");
+    const qty = Number(document.getElementById("qty")?.value || 0);
+    const stock = Number(item?.stock_total || 0);
+    const salePrice = Number(document.getElementById("sale_price")?.value || 0);
+    const discount = Number(document.getElementById("discount")?.value || 0);
+    const cost = Number(item?.cost_price || 0);
+
+    if (!item?.item_id) {
+        setPosStatus("Select a valid stock item before adding it to the bill.", "error");
+        if (itemCodeInput.value.trim() !== "") {
+            itemCodeInput.focus();
+        } else {
+            itemNameInput.focus();
+        }
+        return false;
+    }
+
+    if (qty < 1) {
+        setPosStatus("Selling quantity is required.", "error");
+        document.getElementById("qty")?.focus();
+        return false;
+    }
+
+    if (String(item.type) === "2" && qty > 1) {
+        openBulkImeiModal();
+        return false;
+    }
+
+    if (stock > 0 && qty > stock) {
+        setPosStatus("You cannot add more than current stock count.", "error");
+        document.getElementById("qty")?.focus();
+        return false;
+    }
+
+    if (salePrice <= 0) {
+        setPosStatus("Sale price is required.", "error");
+        document.getElementById("sale_price")?.focus();
+        return false;
+    }
+
+    if (discount < 0) {
+        setPosStatus("Discount cannot be negative.", "error");
+        document.getElementById("discount")?.focus();
+        return false;
+    }
+
+    if (salePrice < cost) {
+        setPosStatus("You are trying to sell this item under cost price. Press Enter again on sale price to continue.", "info");
+        const alreadyWarned = document.getElementById("sale_price")?.dataset.underCostConfirmed === "1";
+        document.getElementById("sale_price").dataset.underCostConfirmed = alreadyWarned ? "1" : "0";
+        if (!alreadyWarned) {
+            document.getElementById("sale_price").dataset.underCostConfirmed = "1";
+            document.getElementById("sale_price")?.focus();
+            return false;
+        }
+    }
+
+    document.getElementById("sale_price").dataset.underCostConfirmed = "";
+    setPosStatus("Item is ready to stage into the bill.", "success");
+    return true;
+}
+
 function openBulkImeiModal() {
     const item = JSON.parse(lookupPayloadInput.value || "{}");
     const qty = Number(document.getElementById("qty")?.value || 0);
@@ -594,6 +949,7 @@ function openBulkImeiModal() {
     document.getElementById("imei_bulk_input").value = "";
     bulkImeiModal.hidden = false;
     document.body.style.overflow = "hidden";
+    setPosStatus("Bulk IMEI input opened for the selected item.", "info");
     window.setTimeout(function () {
         document.getElementById("imei_bulk_input")?.focus();
     }, 0);
@@ -609,24 +965,139 @@ function togglePaymentFields() {
     document.getElementById("cash_amount_row").hidden = method === "card";
     document.getElementById("card_amount_row").hidden = method === "cash";
     document.getElementById("card_number_row").hidden = method === "cash";
+    refreshPaymentDraftSummary();
 }
 
 itemCategory?.addEventListener("change", function () {
     loadCategoryItems(this.value);
+    clearLookupDraft(true);
 });
 
 document.getElementById("qty")?.addEventListener("input", function () {
+    document.getElementById("sale_price").dataset.underCostConfirmed = "";
     syncBulkImeiButton();
+});
+
+document.getElementById("sale_price")?.addEventListener("input", function () {
+    this.dataset.underCostConfirmed = "";
+});
+
+document.getElementById("discount")?.addEventListener("input", function () {
+    document.getElementById("sale_price").dataset.underCostConfirmed = "";
+});
+
+itemNameInput?.addEventListener("change", function () {
+    if (this.value.trim() !== "") {
+        lookupItemByName();
+    }
+});
+
+itemNameInput?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        lookupItemByName();
+    }
+});
+
+itemCodeInput?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        lookupItemByCode();
+    }
+});
+
+document.getElementById("customer_name_search")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchCustomers();
+    }
+});
+
+document.getElementById("customer_mobile_search")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        searchCustomers();
+    }
+});
+
+document.getElementById("qty")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        document.getElementById("sale_price")?.focus();
+    }
+});
+
+document.getElementById("sale_price")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        if (validateDraftBeforeAdd()) {
+            addItemForm?.requestSubmit();
+        }
+    }
+});
+
+document.getElementById("discount")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        if (validateDraftBeforeAdd()) {
+            addItemForm?.requestSubmit();
+        }
+    }
+});
+
+addItemForm?.addEventListener("submit", function (event) {
+    if (!validateDraftBeforeAdd()) {
+        event.preventDefault();
+    }
 });
 
 sellerIdInput?.addEventListener("change", function () {
     lookupSalesPerson();
 });
 
+sellerIdInput?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        lookupSalesPerson();
+    }
+});
+
+sellerIdInput?.addEventListener("blur", function () {
+    if ((this.value || "").trim() === "") {
+        this.value = "0";
+        useCurrentCashier();
+    }
+});
+
+document.getElementById("card_number")?.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        setPosStatus("Staging payment details from the card field fast path.", "info");
+        this.closest("form")?.requestSubmit();
+    }
+});
+
 document.addEventListener("keydown", function (event) {
+    if (event.key === "F5") {
+        event.preventDefault();
+        setPosStatus("Use the Clear Bill button to reset the current bill slot.", "info");
+        document.querySelector('form[action="/pos/slots/<?= $activeSlot ?>/clear"] button[type="submit"]')?.focus();
+    }
+
     if (event.key === "F4") {
         event.preventDefault();
         document.getElementById("pos_category")?.focus();
+    }
+
+    if (event.key === "F6") {
+        event.preventDefault();
+        document.getElementById("customer_name_search")?.focus();
+    }
+
+    if (event.key === "F7") {
+        event.preventDefault();
+        document.getElementById("seller_id_search")?.focus();
+        document.getElementById("seller_id_search")?.select();
     }
 
     if (event.key === "F8") {
@@ -639,6 +1110,11 @@ document.addEventListener("keydown", function (event) {
         document.getElementById("cash_amount")?.focus();
     }
 
+    if (event.key === "F9") {
+        event.preventDefault();
+        document.getElementById("method")?.focus();
+    }
+
     if (event.key === "Escape" && editModal && !editModal.hidden) {
         event.preventDefault();
         closeEditModal();
@@ -648,12 +1124,64 @@ document.addEventListener("keydown", function (event) {
         event.preventDefault();
         closeBulkImeiModal();
     }
+
+    if (event.key === "Escape" && editModal.hidden && bulkImeiModal.hidden && lookupPayloadInput.value !== "{}") {
+        event.preventDefault();
+        clearLookupDraft();
+        setPosStatus("Current item draft was cleared. Ready for a new lookup.", "info");
+        itemCodeInput?.focus();
+        itemCodeInput?.select();
+    }
+
+    if (/^[1-9]$/.test(event.key)
+        && customerResultButtons.length > 0
+        && editModal.hidden
+        && bulkImeiModal.hidden
+        && customerSelectionContextActive()) {
+        const index = Number(event.key) - 1;
+        const targetButton = customerResultButtons[index];
+        if (targetButton) {
+            event.preventDefault();
+            targetButton.click();
+        }
+    }
 });
 
 document.getElementById("cash_amount")?.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" && <?= $customer["id"] > 0 ? "true" : "false" ?>) {
+    if (event.key === "Enter") {
         event.preventDefault();
-        document.querySelector('form[action="/pos/checkout"] button[type="submit"]')?.click();
+        if (validateCheckoutDraft()) {
+            setPosStatus("Submitting the current bill from the cash input fast path.", "info");
+            checkoutForm?.requestSubmit();
+        }
+    }
+});
+
+document.getElementById("method")?.addEventListener("change", refreshPaymentDraftSummary);
+document.getElementById("cash_amount")?.addEventListener("input", refreshPaymentDraftSummary);
+document.getElementById("card_amount")?.addEventListener("input", refreshPaymentDraftSummary);
+document.getElementById("card_number")?.addEventListener("input", refreshPaymentDraftSummary);
+
+document.getElementById("exact_cash_button")?.addEventListener("click", function () {
+    document.getElementById("method").value = "cash";
+    togglePaymentFields();
+    document.getElementById("cash_amount").value = Number(totalDue).toFixed(2);
+    document.getElementById("card_amount").value = "0";
+    document.getElementById("card_number").value = "";
+    refreshPaymentDraftSummary();
+    setPosStatus("Exact cash amount loaded for this bill.", "success");
+    document.getElementById("cash_amount")?.focus();
+    document.getElementById("cash_amount")?.select();
+});
+
+paymentDraftForm?.addEventListener("submit", function () {
+    syncCheckoutPaymentInputs();
+});
+
+checkoutForm?.addEventListener("submit", function (event) {
+    syncCheckoutPaymentInputs();
+    if (!validateCheckoutDraft()) {
+        event.preventDefault();
     }
 });
 
@@ -671,4 +1199,6 @@ bulkImeiModal?.addEventListener("click", function (event) {
 
 togglePaymentFields();
 syncBulkImeiButton();
+refreshPaymentDraftSummary();
 </script>
+
