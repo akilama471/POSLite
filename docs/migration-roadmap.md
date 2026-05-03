@@ -262,7 +262,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - customer belong/fault management
 
 ## Step 10: Reporting
-- Status: pending
+- Status: partially complete (Phase 1 Sales Reports done)
 - Legacy sources:
   - `sys_reports.php`
   - all `reports/rpt_*.php`
