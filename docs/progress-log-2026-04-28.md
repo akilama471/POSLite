@@ -738,6 +738,140 @@ Deferred in this slice:
 - bulk IMEI staging during GRN entry
 - follow-up GRN balance payment flow from `supplier_grn_payment.php` and `c_supplier_grn_payment.php`
 
+## 2026-05-03 GRN Payment Slice
+Migrated from:
+- `old-code/app/supplier_grn_payment.php`
+- `old-code/app/c_supplier_grn_payment.php`
+
+Implemented in:
+- `new-code/Models/Finance.php`
+- `new-code/controller/GrnPaymentController.php`
+- `new-code/public/index.php`
+- `new-code/views/finance/grns/index.php`
+- `new-code/views/finance/grns/show.php`
+- `new-code/views/catalog/_nav.php`
+- `new-code/views/grns/index.php`
+- `new-code/views/grns/create.php`
+
+Scope completed:
+- added GRN payment list/search page at `GET /grn-payments`
+- added GRN payment detail and history page at `GET /grn-payments/{id}`
+- added due settlement actions for cash, cheque, and supplier cash-credit
+- GRN due settlement now updates `shop_grn_pay`, writes `shop_grn_pay_log`, writes supplier ledger rows, and writes `cash_book` / `account_cheque` rows where applicable
+- supplier cash-credit settlement now consumes selected `account_cashcredit` rows and refreshes supplier credit balances
+- linked the new GRN payment page from the GRN workspace and the main catalog navigation
+
+Deferred in this slice:
+- legacy print-bill handoff after GRN payment actions
+- the broader GRN payment reporting slice from `reports/c_grn.php`
+
+## 2026-05-03 GRN Reporting Slice
+Migrated from:
+- `old-code/app/reports/c_grn.php`
+
+Implemented in:
+- `new-code/Models/Grn.php`
+- `new-code/controller/FinanceReportController.php`
+- `new-code/public/index.php`
+- `new-code/views/reports/grns/list.php`
+- `new-code/views/reports/grns/detail.php`
+- `new-code/views/reports/grns/summary.php`
+- `new-code/views/catalog/_nav.php`
+
+Scope completed:
+- added GRN list report at `GET /reports/grns`
+- added single GRN detail report at `GET /reports/grns/{id}`
+- added supplier-wise GRN payment summary report at `GET /reports/grns/summary`
+- report pages now use the migrated GRN and GRN-payment tables directly through MVC model methods
+- linked GRN report routes into the report navigation using `r_29`, `r_30`, and `r_31`
+
+Deferred in this slice:
+- the remaining lower-priority report modes still bundled into legacy `c_grn.php`
+- GRN/barcode print-specific report outputs from later printing slices
+
+## 2026-05-03 Stock Transfer Read And Receive Slice
+Migrated from:
+- `old-code/app/transfer_note.php`
+- `old-code/app/transfer_received.php`
+- `old-code/app/c_trans_received_accept.php`
+
+Implemented in:
+- `new-code/Models/StockTransfer.php`
+- `new-code/controller/StockTransferController.php`
+- `new-code/public/index.php`
+- `new-code/views/stock/transfers/outgoing.php`
+- `new-code/views/stock/transfers/incoming.php`
+- `new-code/views/catalog/_nav.php`
+- `new-code/controller/DashboardController.php`
+
+Scope completed:
+- added transfer-note history page at `GET /stock/transfers`
+- added incoming transfer acceptance page at `GET /stock/transfers/received`
+- added transfer dispatch action at `POST /stock/transfers/{id}/dispatch`
+- added receive acceptance action at `POST /stock/transfers/received/{id}/accept`
+- outgoing transfer notes now show grouped item logs, status labels, source shop, and operator
+- incoming transfer notes now show pending received stock and activate transferred barcode/IMEI stock on acceptance
+- dashboard Stocks tile now points to the migrated transfer pages when the user has `p_49` or `p_50`
+
+Deferred in this slice:
+- transfer creation/staging UI from `transfer_product_new.php` and `c_trans_stock.php`
+- complaint / audit handling from `c_trans_received_complain.php`
+- stock-return, stock-adjust, and stock-remove workflows
+
+## 2026-05-03 Stock Transfer Draft And Submit Slice
+Migrated from:
+- `old-code/app/transfer_product_new.php`
+- `old-code/app/c_trans_stock.php`
+
+Implemented in:
+- `new-code/Models/StockTransfer.php`
+- `new-code/controller/StockTransferController.php`
+- `new-code/public/index.php`
+- `new-code/views/stock/transfers/create.php`
+- `new-code/views/stock/transfers/outgoing.php`
+- `new-code/views/catalog/_nav.php`
+- `new-code/controller/DashboardController.php`
+
+Scope completed:
+- added stock transfer workspace at `GET /stock/transfers/create`
+- added session-backed target-shop and transfer-line draft flow instead of reviving legacy `temp_stock_trans`
+- added stock search by barcode/IMEI and item name from the current shop
+- added draft line add, update, remove, clear, and final submit actions
+- transfer submit now writes `stock_transmain`, `stock_translog`, moves barcode/IMEI stock into transfer state, and moves recharge stock to the target shop in one transaction
+- dashboard Stocks tile now prefers the transfer-create page for users with `p_48`
+
+Deferred in this slice:
+- legacy complaint / audit raise flow from `c_trans_received_complain.php`
+- print/download transfer note document output
+- stock-return, stock-adjust, and stock-remove workflows
+
+## 2026-05-03 Stock Transfer Complaint Slice
+Migrated from:
+- `old-code/app/c_trans_received_complain.php`
+- `old-code/app/transfer_error_correct.php`
+- `old-code/app/c_trans_errcorrect.php`
+
+Implemented in:
+- `new-code/Models/StockTransfer.php`
+- `new-code/controller/StockTransferController.php`
+- `new-code/public/index.php`
+- `new-code/views/stock/transfers/incoming.php`
+- `new-code/views/stock/transfers/complaints.php`
+- `new-code/views/catalog/_nav.php`
+
+Scope completed:
+- added complaint raise action on the received-transfer page
+- complaint raise now writes `shop_transerror` and moves the transfer main record into complaint state
+- added admin-only stock error handling queue at `GET /stock/transfers/complaints`
+- added complaint resolution action with release or discard handling
+- release resolution now re-activates transferred barcode/IMEI stock, and discard resolution now marks transferred barcode/IMEI stock as discarded
+- added admin-only navigation link for stock error handling
+
+Deferred in this slice:
+- the legacy half-finished per-line “release with corrected amount” editor
+- print/download transfer note document output
+- stock-return, stock-adjust, and stock-remove workflows
+
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
   - controller

@@ -99,6 +99,8 @@ $router->get("/supplier-accounts", "AccountBalanceController@suppliers", ["auth"
 $router->get("/supplier-credit-balances", "AccountBalanceController@supplierCashCredits", ["auth", "permission:p_28"]);
 $router->post("/supplier-credit-balances/refresh", "AccountBalanceController@refreshSupplierCashCredits", ["auth", "permission:p_28"]);
 $router->get("/supplier-payments", "PaymentController@supplierForm", ["auth", "permission:p_29", "cashier"]);
+$router->get("/grn-payments", "GrnPaymentController@index", ["auth", "permission:p_29", "cashier"]);
+$router->get("/grn-payments/{id}", "GrnPaymentController@show", ["auth", "permission:p_29", "cashier"]);
 $router->get("/grns/create", "GrnController@create", ["auth", "permission:p_43", "cashier"]);
 $router->post("/grns/draft/header", "GrnController@updateHeader", ["auth", "permission:p_43", "cashier"]);
 $router->post("/grns/draft/lines", "GrnController@addLine", ["auth", "permission:p_43", "cashier"]);
@@ -108,8 +110,14 @@ $router->post("/grns/submit", "GrnController@submit", ["auth", "permission:p_43"
 $router->get("/grns", "GrnController@index", ["auth", "permission:p_45"]);
 $router->get("/api/grns/items/details", "GrnController@itemDetails", ["auth", "permission:p_43", "cashier"]);
 $router->get("/reports/supplier-payments", "FinanceReportController@supplierPayments", ["auth", "permission:r_15"]);
+$router->get("/reports/grns", "FinanceReportController@grnList", ["auth", "permission:r_30"]);
+$router->get("/reports/grns/summary", "FinanceReportController@grnSupplierSummary", ["auth", "permission:r_29"]);
+$router->get("/reports/grns/{id}", "FinanceReportController@grnDetail", ["auth", "permission:r_31"]);
 $router->get("/api/supplier-payments/details", "PaymentController@supplierDetails", ["auth", "permission:p_29", "cashier"]);
 $router->post("/supplier-payments", "PaymentController@storeSupplierPayment", ["auth", "permission:p_29", "cashier"]);
+$router->post("/grn-payments/{id}/cash", "GrnPaymentController@payCash", ["auth", "permission:p_29", "cashier"]);
+$router->post("/grn-payments/{id}/cheque", "GrnPaymentController@payCheque", ["auth", "permission:p_29", "cashier"]);
+$router->post("/grn-payments/{id}/credit", "GrnPaymentController@payCredit", ["auth", "permission:p_29", "cashier"]);
 $router->get("/customers", "CustomerController@index", ["auth", "permission:p_37"]);
 $router->get("/customers/create", "CustomerController@create", ["auth", "permission:p_36"]);
 $router->post("/customers", "CustomerController@store", ["auth", "permission:p_36"]);
@@ -123,5 +131,20 @@ $router->get("/customer-payments", "PaymentController@customerForm", ["auth", "p
 $router->get("/reports/customer-payments", "FinanceReportController@customerPayments", ["auth", "permission:r_19"]);
 $router->get("/api/customer-payments/details", "PaymentController@customerDetails", ["auth", "permission:p_41", "cashier"]);
 $router->post("/customer-payments", "PaymentController@storeCustomerPayment", ["auth", "permission:p_41", "cashier"]);
+$router->get("/stock/transfers/create", "StockTransferController@create", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/target", "StockTransferController@updateTarget", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/search", "StockTransferController@search", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/lines", "StockTransferController@addLine", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/lines/{id}", "StockTransferController@updateLine", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/lines/{id}/delete", "StockTransferController@removeLine", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/clear", "StockTransferController@clearDraft", ["auth", "permission:p_48"]);
+$router->post("/stock/transfers/create/submit", "StockTransferController@submitDraft", ["auth", "permission:p_48"]);
+$router->get("/stock/transfers", "StockTransferController@outgoing", ["auth", "permission:p_49"]);
+$router->post("/stock/transfers/{id}/dispatch", "StockTransferController@markInTransit", ["auth", "permission:p_49"]);
+$router->get("/stock/transfers/received", "StockTransferController@incoming", ["auth", "permission:p_50"]);
+$router->post("/stock/transfers/received/{id}/accept", "StockTransferController@accept", ["auth", "permission:p_50"]);
+$router->post("/stock/transfers/received/{id}/complain", "StockTransferController@complain", ["auth", "permission:p_50"]);
+$router->get("/stock/transfers/complaints", "StockTransferController@complaints", ["auth"]);
+$router->post("/stock/transfers/complaints/{id}", "StockTransferController@resolveComplaint", ["auth"]);
 
 $router->dispatch($_SERVER["REQUEST_URI"], $_SERVER["REQUEST_METHOD"]);

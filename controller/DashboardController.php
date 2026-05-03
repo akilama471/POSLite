@@ -63,6 +63,13 @@ class DashboardController
         $purchaseHref = ($permissions["p_43"] ?? false)
             ? "/grns/create"
             : (($permissions["p_45"] ?? false) ? "/grns" : "#");
+        $stockHref = ($permissions["p_48"] ?? false)
+            ? "/stock/transfers/create"
+            : (($permissions["p_49"] ?? false)
+                ? "/stock/transfers"
+            : (($permissions["p_50"] ?? false)
+                ? "/stock/transfers/received"
+                : (($permissions["p_52"] ?? false) ? "/item-alerts" : "#")));
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
@@ -74,7 +81,7 @@ class DashboardController
             ["key" => "p_30", "label" => "Bill Details", "href" => "#", "migrated" => false],
             ["key" => "p_35", "label" => "Customers", "href" => $customerHref, "migrated" => $customerHref !== "#"],
             ["key" => "p_42", "label" => "Purchases", "href" => $purchaseHref, "migrated" => $purchaseHref !== "#"],
-            ["key" => "p_47", "label" => "Stocks", "href" => "#", "migrated" => false],
+            ["key" => "p_47", "label" => "Stocks", "href" => $stockHref, "migrated" => $stockHref !== "#"],
             ["key" => "p_56", "label" => "Cashier", "href" => $cashierHref, "migrated" => $cashierHref !== "#"],
             ["key" => "p_62", "label" => "Reports", "href" => $reportsHref, "migrated" => $reportsHref !== "#"],
             ["key" => "p_77", "label" => "SMS Broadcast", "href" => "#", "migrated" => false],

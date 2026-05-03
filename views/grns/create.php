@@ -29,7 +29,7 @@ $formatMoney = static function (mixed $value): string {
                     <a class="nav-link" href="/grns">Find GRN</a>
                 <?php endif; ?>
                 <?php if (can("p_29")): ?>
-                    <a class="nav-link" href="/supplier-payments">Supplier Payments</a>
+                    <a class="nav-link" href="/grn-payments">GRN Payments</a>
                 <?php endif; ?>
                 <a class="nav-link" href="/cashier">Cashier Duty</a>
                 <a class="nav-link" href="/dashboard">Back to Dashboard</a>

@@ -35,9 +35,16 @@
         <?php endif; ?>
         <?php if (can("p_29")): ?>
             <a class="nav-link <?= $currentPath === "/supplier-payments" ? "active" : "" ?>" href="/supplier-payments">Supplier Payment</a>
+            <a class="nav-link <?= $currentPath === "/grn-payments" || str_starts_with($currentPath, "/grn-payments/") ? "active" : "" ?>" href="/grn-payments">GRN Payment</a>
         <?php endif; ?>
         <?php if (can("r_15")): ?>
             <a class="nav-link <?= $currentPath === "/reports/supplier-payments" ? "active" : "" ?>" href="/reports/supplier-payments">Supplier Payment Report</a>
+        <?php endif; ?>
+        <?php if (can("r_29")): ?>
+            <a class="nav-link <?= $currentPath === "/reports/grns/summary" ? "active" : "" ?>" href="/reports/grns/summary">GRN Report</a>
+        <?php endif; ?>
+        <?php if (can("r_30")): ?>
+            <a class="nav-link <?= $currentPath === "/reports/grns" ? "active" : "" ?>" href="/reports/grns">GRN List</a>
         <?php endif; ?>
         <?php if (can("p_36")): ?>
             <a class="nav-link <?= $currentPath === "/customers/create" ? "active" : "" ?>" href="/customers/create">Add Customer</a>
@@ -59,6 +66,18 @@
         <?php endif; ?>
         <?php if (can("p_52")): ?>
             <a class="nav-link <?= $currentPath === "/item-alerts" ? "active" : "" ?>" href="/item-alerts">Item Alert Config</a>
+        <?php endif; ?>
+        <?php if (can("p_48")): ?>
+            <a class="nav-link <?= $currentPath === "/stock/transfers/create" ? "active" : "" ?>" href="/stock/transfers/create">Stock Transfer</a>
+        <?php endif; ?>
+        <?php if (can("p_49")): ?>
+            <a class="nav-link <?= $currentPath === "/stock/transfers" ? "active" : "" ?>" href="/stock/transfers">Transfer Note</a>
+        <?php endif; ?>
+        <?php if (can("p_50")): ?>
+            <a class="nav-link <?= $currentPath === "/stock/transfers/received" ? "active" : "" ?>" href="/stock/transfers/received">Transfer Received</a>
+        <?php endif; ?>
+        <?php if ((int) (($auth["user_id"] ?? -1)) === 0): ?>
+            <a class="nav-link <?= $currentPath === "/stock/transfers/complaints" ? "active" : "" ?>" href="/stock/transfers/complaints">Stock Error Handling</a>
         <?php endif; ?>
         <?php if (can("p_59") || can("p_58")): ?>
             <a class="nav-link <?= $currentPath === "/cashier" ? "active" : "" ?>" href="/cashier">Cashier Duty</a>

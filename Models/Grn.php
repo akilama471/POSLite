@@ -397,6 +397,75 @@ class Grn extends Model
         return $headers;
     }
 
+    public function reportList(string $fromDate, string $toDate, int $shopId, int $authShopId): array
+    {
+        $effectiveShopId = $authShopId > 0 ? $authShopId : $shopId;
+        $sql = "SELECT main.*,
+                       shop.shop_info_name AS grn_shop_name
+                FROM shop_grnmain AS main
+                LEFT JOIN sys_shop AS shop
+                  ON shop.shopid = main.shop_number
+                WHERE date(main.operation_time) >= :from_date
+                  AND date(main.operation_time) <= :to_date";
+        $params = [
+            "from_date" => $fromDate,
+            "to_date" => $toDate,
+        ];
+
+        if ($effectiveShopId >= 0) {
+            $sql .= " AND main.shop_number = :shop_id";
+            $params["shop_id"] = $effectiveShopId;
+        }
+
+        $sql .= " ORDER BY main.operation_time DESC, main.recordid DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    public function reportSupplierSummary(string $fromDate, string $toDate, int $supplierId): array
+    {
+        $sql = "SELECT pay.*,
+                       supplier.supplier_name,
+                       shop.shop_info_name AS shop_name
+                FROM shop_grn_pay AS pay
+                LEFT JOIN shop_supplier AS supplier
+                  ON supplier.supplierid = pay.supply_id
+                LEFT JOIN sys_shop AS shop
+                  ON shop.shopid = pay.shop_id
+                WHERE date(pay.record_time) >= :from_date
+                  AND date(pay.record_time) <= :to_date";
+        $params = [
+            "from_date" => $fromDate,
+            "to_date" => $toDate,
+        ];
+
+        if ($supplierId > 0) {
+            $sql .= " AND pay.supply_id = :supplier_id";
+            $params["supplier_id"] = $supplierId;
+        }
+
+        $sql .= " ORDER BY pay.record_time DESC, pay.record_id DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    public function reportDetail(string $grnRefNo, int $authShopId): ?array
+    {
+        $headers = $this->loadHeaders($grnRefNo, "", $authShopId, "", "");
+        if ($headers === []) {
+            return null;
+        }
+
+        $this->attachItems($headers);
+        return $headers[0] ?? null;
+    }
+
     private function loadHeaders(string $grnId, string $supplier, int $shopId, string $startDate, string $endDate): array
     {
         $sql = "SELECT main.*,
