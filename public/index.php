@@ -26,6 +26,29 @@ $router->get("/cashier/cash-in", "CashInController@index", ["auth", "permission:
 $router->post("/cashier/cash-in", "CashInController@store", ["auth", "permission:p_57", "cashier"]);
 $router->post("/cashier/cash-in/accounts", "CashInController@storeAccount", ["auth", "permission:p_61"]);
 $router->post("/cashier/cash-in/accounts/{id}/update", "CashInController@updateAccount", ["auth", "permission:p_61"]);
+// Repair Center
+$router->get("/repair/jobs/new", "RepairJobController@create", ["auth", "permission:p_3", "cashier"]);
+$router->post("/repair/jobs", "RepairJobController@store", ["auth", "permission:p_3", "cashier"]);
+$router->get("/repair/process", "RepairProcessController@index", ["auth", "permission:p_4"]);
+$router->post("/repair/process/load", "RepairProcessController@loadJob", ["auth", "permission:p_4"]);
+$router->post("/repair/process/add-part", "RepairProcessController@addPart", ["auth", "permission:p_4"]);
+$router->post("/repair/process/finish", "RepairProcessController@finishTechnical", ["auth", "permission:p_4"]);
+$router->get("/repair/release", "RepairReleaseController@index", ["auth", "permission:p_5"]);
+$router->post("/repair/release/load", "RepairReleaseController@loadJobData", ["auth", "permission:p_5"]);
+$router->post("/repair/release", "RepairReleaseController@store", ["auth", "permission:p_5"]);
+$router->get("/repair/handover", "RepairHandoverController@index", ["auth", "permission:p_6"]);
+$router->post("/repair/handover/load", "RepairHandoverController@loadJobData", ["auth", "permission:p_6"]);
+$router->post("/repair/handover", "RepairHandoverController@store", ["auth", "permission:p_6", "cashier"]);
+// Repair Admin
+$router->get("/repair/admin/faults", "RepairAdminController@faultsIndex", ["auth"]);
+$router->post("/repair/admin/faults", "RepairAdminController@faultsStore", ["auth"]);
+$router->post("/repair/admin/faults/{id}/update", "RepairAdminController@faultsUpdate", ["auth"]);
+$router->post("/repair/admin/faults/{id}/delete", "RepairAdminController@faultsDelete", ["auth"]);
+$router->get("/repair/admin/belongs", "RepairAdminController@belongsIndex", ["auth"]);
+$router->post("/repair/admin/belongs", "RepairAdminController@belongsStore", ["auth"]);
+$router->post("/repair/admin/belongs/{id}/update", "RepairAdminController@belongsUpdate", ["auth"]);
+$router->post("/repair/admin/belongs/{id}/delete", "RepairAdminController@belongsDelete", ["auth"]);
+
 $router->get("/pos", "PosController@index", ["auth", "permission:p_2", "cashier"]);
 $router->get("/pos/slots/{slot}", "PosController@switchSlot", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/slots/{slot}/clear", "PosController@clearSlot", ["auth", "permission:p_2", "cashier"]);

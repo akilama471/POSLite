@@ -236,7 +236,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - item alerts
 
 ## Step 9: Repair Center
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `rep_new_job.php`
   - `rep_job_process.php`
