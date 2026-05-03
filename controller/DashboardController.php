@@ -60,6 +60,9 @@ class DashboardController
         $cashierHref = (($permissions["p_59"] ?? false) || ($permissions["p_58"] ?? false))
             ? "/cashier"
             : "#";
+        $purchaseHref = ($permissions["p_43"] ?? false)
+            ? "/grns/create"
+            : (($permissions["p_45"] ?? false) ? "/grns" : "#");
 
         return [
             ["key" => "p_1", "label" => "Dashboard", "href" => "/dashboard", "migrated" => true],
@@ -70,7 +73,7 @@ class DashboardController
             ["key" => "p_24", "label" => "Suppliers", "href" => $supplierHref, "migrated" => $supplierHref !== "#"],
             ["key" => "p_30", "label" => "Bill Details", "href" => "#", "migrated" => false],
             ["key" => "p_35", "label" => "Customers", "href" => $customerHref, "migrated" => $customerHref !== "#"],
-            ["key" => "p_42", "label" => "Purchases", "href" => "#", "migrated" => false],
+            ["key" => "p_42", "label" => "Purchases", "href" => $purchaseHref, "migrated" => $purchaseHref !== "#"],
             ["key" => "p_47", "label" => "Stocks", "href" => "#", "migrated" => false],
             ["key" => "p_56", "label" => "Cashier", "href" => $cashierHref, "migrated" => $cashierHref !== "#"],
             ["key" => "p_62", "label" => "Reports", "href" => $reportsHref, "migrated" => $reportsHref !== "#"],

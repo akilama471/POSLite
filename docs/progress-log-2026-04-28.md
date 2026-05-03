@@ -652,6 +652,92 @@ Deferred in this slice:
 - follow-up processing from `return_cus_activity.php`
 - `c_bilretactivity_*` operational decisions after the return request is queued
 
+## 2026-05-03 POS Return Activity Slice
+Migrated from:
+- `old-code/app/return_cus_activity.php`
+- `old-code/app/c_bilretactivity_get_details.php`
+- `old-code/app/c_bilretactivity_updateprocess.php`
+- `old-code/app/c_bilretactivity_loadretitems.php`
+
+Implemented in:
+- `new-code/Models/BillReturn.php`
+- `new-code/controller/BillReturnController.php`
+- `new-code/public/index.php`
+- `new-code/views/pos/return_activity.php`
+- `new-code/views/pos/return_pending.php`
+- `new-code/views/pos/return_history.php`
+
+Scope completed:
+- added pending return-activity processor page at `GET /pos/returns/pending/{billnumber}/{altertime}`
+- added replacement/cash settlement action at `POST /pos/returns/items/{id}/settle`
+- added customer-credit settlement action at `POST /pos/returns/items/{id}/credit`
+- pending-return queue now opens directly into activity processing instead of only history
+- replacement settlement supports code or item-name lookup against migrated MVC POS helper endpoints
+- replacement settlements now decrement current shop stock, write `alter_bill_information`, update `alter_bill_mainsale`, and write `cash_book` movements for money returned or collected
+- customer-credit settlements now create `account_cashcredit_customer` rows for registered customers and mark the return item accordingly
+- pending return headers now auto-close by setting `activity_update = 1` once all pending items for that alter batch are processed
+- corrected return-history status display so `activity = 2` is treated as customer credit rather than cancellation
+
+Deferred in this slice:
+- deeper legacy barcode/warranty print coupling from the old return activity page
+- broader damage-return downstream processing tied to later `stock_return_log` activity stages (`3+`)
+
+## 2026-05-03 GRN Read Side Slice
+Migrated from:
+- `old-code/app/findgrn.php`
+
+Implemented in:
+- `new-code/Models/Grn.php`
+- `new-code/controller/GrnController.php`
+- `new-code/public/index.php`
+- `new-code/views/grns/index.php`
+- `new-code/controller/DashboardController.php`
+
+Scope completed:
+- added GRN search page at `GET /grns`
+- migrated legacy GRN lookup filters for GRN ID, supplier name, item name, IMEI, shop, and date range
+- default no-filter behavior now loads today's GRNs, matching the old page intent
+- each GRN result now shows header details plus the full `shop_grnitem` item breakdown
+- dashboard Purchases tile now resolves to the migrated GRN search page for users with `p_45`
+- replaced raw legacy lookup SQL with prepared statements and grouped MVC model logic
+
+Deferred in this slice:
+- GRN temp entry flow from `grn_new.php`, `grn_add.php`, and `c_grn_temp_*`
+- GRN payment write flow from `supplier_grn_payment.php` and `c_supplier_grn_payment.php`
+
+## 2026-05-03 GRN Draft And Finalize Slice
+Migrated from:
+- `old-code/app/grn_new.php`
+- `old-code/app/grn_add.php`
+- `old-code/app/c_grn_temp_add.php`
+- `old-code/app/c_grn_temp_delete.php`
+- `old-code/app/c_grn_temp_load.php`
+- `old-code/app/c_grn_temp_ghange.php`
+
+Implemented in:
+- `new-code/Models/Grn.php`
+- `new-code/controller/GrnController.php`
+- `new-code/public/index.php`
+- `new-code/views/grns/create.php`
+- `new-code/views/grns/index.php`
+- `new-code/controller/DashboardController.php`
+
+Scope completed:
+- added GRN create workspace at `GET /grns/create`
+- added session-backed GRN draft header update at `POST /grns/draft/header`
+- added draft line staging, remove, and clear actions under `/grns/draft/*`
+- added item-detail helper at `GET /api/grns/items/details` for used type and latest GRN pricing preload
+- added transaction-backed GRN submit flow at `POST /grns/submit`
+- GRN finalization now writes `shop_grnmain`, `shop_grnitem`, supplier ledger rows, GRN payment rows, and stock mutations together
+- barcode, IMEI, and recharge-card stock now route into `shop_stock_item`, `shop_stock_imei`, and `shop_rcv_stock` from the new MVC flow
+- dashboard Purchases tile now prefers the GRN create page for users with `p_43`
+- removed direct `$_POST` and `$_SESSION` coupling from GRN payment persistence so the model uses explicit method inputs
+
+Deferred in this slice:
+- draft line edit/update UI parity from the old temp-grid flow
+- bulk IMEI staging during GRN entry
+- follow-up GRN balance payment flow from `supplier_grn_payment.php` and `c_supplier_grn_payment.php`
+
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:
   - controller

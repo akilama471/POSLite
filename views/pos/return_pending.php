@@ -60,8 +60,9 @@ $formatMoney = static function (mixed $value): string {
                                         <td style="padding:12px;"><?= (int) ($item["item_count"] ?? 0) ?></td>
                                         <td style="padding:12px; text-align:right;"><?= htmlspecialchars($formatMoney($item["total_return_value"] ?? 0), ENT_QUOTES, "UTF-8") ?></td>
                                         <td style="padding:12px;"><?= htmlspecialchars((string) ($item["record_time"] ?? ""), ENT_QUOTES, "UTF-8") ?></td>
-                                        <td style="padding:12px;">
-                                            <a class="btn btn-primary" href="/pos/bills/<?= htmlspecialchars((string) ($item["billnumber"] ?? ""), ENT_QUOTES, "UTF-8") ?>/returns">Open History</a>
+                                        <td style="padding:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                                            <a class="btn btn-primary" href="/pos/returns/pending/<?= htmlspecialchars((string) ($item["billnumber"] ?? ""), ENT_QUOTES, "UTF-8") ?>/<?= (int) ($item["alter_times"] ?? 0) ?>">Process</a>
+                                            <a class="btn" href="/pos/bills/<?= htmlspecialchars((string) ($item["billnumber"] ?? ""), ENT_QUOTES, "UTF-8") ?>/returns" style="background:#eef2f5; color:#163041;">History</a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

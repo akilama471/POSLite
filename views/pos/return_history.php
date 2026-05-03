@@ -91,7 +91,7 @@ $bill = is_array($bill ?? null) ? $bill : [];
                                                 echo match ($activity) {
                                                     0 => "Pending Activity",
                                                     1 => "Processed",
-                                                    2 => "Cancelled",
+                                                    2 => "Credit Issued",
                                                     default => "Unknown",
                                                 };
                                                 ?>

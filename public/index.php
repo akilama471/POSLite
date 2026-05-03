@@ -36,6 +36,9 @@ $router->get("/pos/bills/{billnumber}/returns/create", "BillReturnController@cre
 $router->post("/pos/bills/{billnumber}/returns", "BillReturnController@store", ["auth", "permission:p_33"]);
 $router->get("/pos/bills/{billnumber}/returns", "BillReturnController@history", ["auth", "permission:p_33"]);
 $router->get("/pos/returns/pending", "BillReturnController@pending", ["auth", "permission:p_34"]);
+$router->get("/pos/returns/pending/{billnumber}/{altertime}", "BillReturnController@activity", ["auth", "permission:p_34"]);
+$router->post("/pos/returns/items/{id}/settle", "BillReturnController@settle", ["auth", "permission:p_34"]);
+$router->post("/pos/returns/items/{id}/credit", "BillReturnController@credit", ["auth", "permission:p_34"]);
 $router->get("/pos/receipts/{billnumber}", "PosController@receipt", ["auth", "permission:p_2"]);
 $router->get("/pos/receipts/{billnumber}/print", "PosController@printReceipt", ["auth", "permission:p_2"]);
 $router->get("/pos/receipts/{billnumber}/barcodes", "PosController@barcodeLabels", ["auth", "permission:p_2"]);
@@ -96,6 +99,14 @@ $router->get("/supplier-accounts", "AccountBalanceController@suppliers", ["auth"
 $router->get("/supplier-credit-balances", "AccountBalanceController@supplierCashCredits", ["auth", "permission:p_28"]);
 $router->post("/supplier-credit-balances/refresh", "AccountBalanceController@refreshSupplierCashCredits", ["auth", "permission:p_28"]);
 $router->get("/supplier-payments", "PaymentController@supplierForm", ["auth", "permission:p_29", "cashier"]);
+$router->get("/grns/create", "GrnController@create", ["auth", "permission:p_43", "cashier"]);
+$router->post("/grns/draft/header", "GrnController@updateHeader", ["auth", "permission:p_43", "cashier"]);
+$router->post("/grns/draft/lines", "GrnController@addLine", ["auth", "permission:p_43", "cashier"]);
+$router->post("/grns/draft/lines/{index}/delete", "GrnController@removeLine", ["auth", "permission:p_43", "cashier"]);
+$router->post("/grns/draft/clear", "GrnController@clear", ["auth", "permission:p_43", "cashier"]);
+$router->post("/grns/submit", "GrnController@submit", ["auth", "permission:p_43", "cashier"]);
+$router->get("/grns", "GrnController@index", ["auth", "permission:p_45"]);
+$router->get("/api/grns/items/details", "GrnController@itemDetails", ["auth", "permission:p_43", "cashier"]);
 $router->get("/reports/supplier-payments", "FinanceReportController@supplierPayments", ["auth", "permission:r_15"]);
 $router->get("/api/supplier-payments/details", "PaymentController@supplierDetails", ["auth", "permission:p_29", "cashier"]);
 $router->post("/supplier-payments", "PaymentController@storeSupplierPayment", ["auth", "permission:p_29", "cashier"]);

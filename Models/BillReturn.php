@@ -135,6 +135,55 @@ class BillReturn extends Model
         return $events;
     }
 
+    public function pendingEvent(string $billNumber, int $alterTime, int $shopId): ?array
+    {
+        $headerStmt = $this->db->prepare(
+            "SELECT *
+             FROM alter_bill_billdata
+             WHERE billnumber = :billnumber
+               AND alter_times = :alter_time
+               AND activity_update = 0
+             LIMIT 1",
+        );
+        $headerStmt->execute([
+            "billnumber" => $billNumber,
+            "alter_time" => $alterTime,
+        ]);
+        $event = $headerStmt->fetch();
+
+        if ($event === false) {
+            return null;
+        }
+
+        if ($shopId > 0 && (int) ($event["alter_shop"] ?? 0) !== $shopId) {
+            return null;
+        }
+
+        $billContext = $this->billForReturn($billNumber, $shopId);
+        if ($billContext === null) {
+            return null;
+        }
+
+        $itemStmt = $this->db->prepare(
+            "SELECT *
+             FROM alter_bill_mainsale
+             WHERE billnumber = :billnumber
+               AND alter_time = :alter_time
+             ORDER BY recordid ASC",
+        );
+        $itemStmt->execute([
+            "billnumber" => $billNumber,
+            "alter_time" => $alterTime,
+        ]);
+
+        return [
+            "event" => $event,
+            "bill" => $billContext["bill"],
+            "sale_lines" => $billContext["lines"],
+            "items" => $this->attachReturnItems($itemStmt->fetchAll(), $billNumber),
+        ];
+    }
+
     public function createReturnRequest(string $billNumber, int $shopId, int $userId, string $reason, array $entries): void
     {
         $reason = trim($reason);
@@ -339,8 +388,194 @@ class BillReturn extends Model
         }
     }
 
+    public function processReplacementSettlement(int $itemRecordId, int $shopId, int $userId, array $payload): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $item = $this->findPendingItemForUpdate($itemRecordId, $shopId);
+            if ($item === null) {
+                throw new RuntimeException("Pending return item was not found.");
+            }
+
+            $replaceType = (int) ($payload["replacement_type"] ?? 0);
+            $replaceRowId = (int) ($payload["replacement_row_id"] ?? 0);
+            $replaceQty = (int) ($payload["replacement_qty"] ?? 0);
+            $replacePrice = (float) ($payload["replacement_price"] ?? 0);
+            $moneyReturn = (float) ($payload["money_return"] ?? 0);
+            $moneyCollect = (float) ($payload["money_collect"] ?? 0);
+            $recordTime = date("Y-m-d H:i:s");
+
+            if ($replaceQty < 0 || $replacePrice < 0 || $moneyReturn < 0 || $moneyCollect < 0) {
+                throw new RuntimeException("Settlement values cannot be negative.");
+            }
+
+            $replaceValue = 0.0;
+            $replacement = null;
+
+            if ($replaceType > 0 || $replaceRowId > 0 || $replaceQty > 0 || $replacePrice > 0) {
+                if ($replaceType < 1 || $replaceType > 3 || $replaceRowId < 1 || $replaceQty < 1 || $replacePrice <= 0) {
+                    throw new RuntimeException("Replacement item details are incomplete.");
+                }
+
+                $replacement = $this->loadReplacementStockForUpdate($replaceType, $replaceRowId, $shopId);
+                if ($replacement === null) {
+                    throw new RuntimeException("Replacement stock item was not found.");
+                }
+
+                if ($replaceType === 2 && $replaceQty !== 1) {
+                    throw new RuntimeException("IMEI replacement quantity must be exactly 1.");
+                }
+
+                $available = $this->replacementAvailableStock($replaceType, $replacement);
+                if ($replaceQty > $available) {
+                    throw new RuntimeException("Replacement quantity exceeds current stock.");
+                }
+
+                $replaceValue = $replaceQty * $replacePrice;
+                $this->decrementReplacementStock($replaceType, $replaceRowId, $replaceQty);
+            }
+
+            $returnSale = (float) ($item["return_sale"] ?? 0);
+            $balance = round($returnSale - $replaceValue - $moneyReturn + $moneyCollect, 2);
+            if (abs($balance) > 0.009) {
+                throw new RuntimeException("Return value is not fully settled.");
+            }
+
+            $infoId = $this->insertAlterInformation([
+                "billnumber" => (string) ($item["billnumber"] ?? ""),
+                "part_id" => (int) ($replacement["part_id"] ?? 0),
+                "cat_id" => (int) ($replacement["cat_id"] ?? 0),
+                "type" => (int) ($replacement["type"] ?? 0),
+                "item_name" => (string) ($replacement["item_name"] ?? ""),
+                "imei_part_no" => (string) ($replacement["code"] ?? "0"),
+                "cost" => (float) ($replacement["cost"] ?? 0),
+                "regular_price" => $replacePrice,
+                "qty" => $replaceQty,
+                "sub_total" => $replaceValue,
+                "return_money" => $moneyReturn,
+                "collect_money" => $moneyCollect,
+                "operator" => $userId,
+                "operation_time" => $recordTime,
+            ]);
+
+            $this->markReturnItemProcessed($itemRecordId, 1, $infoId);
+
+            if ($moneyReturn > 0) {
+                $this->insertCashBook([
+                    "op_date" => $recordTime,
+                    "shop" => $shopId,
+                    "user" => $userId,
+                    "pay_type" => 1,
+                    "remark" => "Return money for bill return. (Bill ID : " . (string) ($item["billnumber"] ?? "") . " and Part name : " . (string) ($item["item_name"] ?? "") . ")",
+                    "cash_in" => 0,
+                    "cash_out" => $moneyReturn,
+                ]);
+            }
+
+            if ($moneyCollect > 0) {
+                $this->insertCashBook([
+                    "op_date" => $recordTime,
+                    "shop" => $shopId,
+                    "user" => $userId,
+                    "pay_type" => 1,
+                    "remark" => "Collect money from customer for bill return. (Bill ID : " . (string) ($item["billnumber"] ?? "") . " and Part name : " . (string) ($item["item_name"] ?? "") . ")",
+                    "cash_in" => $moneyCollect,
+                    "cash_out" => 0,
+                ]);
+            }
+
+            $this->finalizeEventIfComplete((string) ($item["billnumber"] ?? ""), (int) ($item["alter_time"] ?? 0));
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $exception;
+        }
+    }
+
+    public function processCustomerCredit(int $itemRecordId, int $shopId, int $userId): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $item = $this->findPendingItemForUpdate($itemRecordId, $shopId);
+            if ($item === null) {
+                throw new RuntimeException("Pending return item was not found.");
+            }
+
+            $billContext = $this->billForReturn((string) ($item["billnumber"] ?? ""), $shopId);
+            if ($billContext === null) {
+                throw new RuntimeException("Bill for the pending return item was not found.");
+            }
+
+            $customerId = (int) ($billContext["bill"]["customer_id"] ?? 0);
+            if ($customerId < 1) {
+                throw new RuntimeException("Cash credit return is only allowed for registered customers.");
+            }
+
+            $recordTime = date("Y-m-d H:i:s");
+            $remark = "Cash Credit Return from Bill ID " . (string) ($item["billnumber"] ?? "") . " For item " . (string) ($item["item_name"] ?? "") . " (" . (int) ($item["return_count"] ?? 0) . " item(s) returned)";
+
+            $stmt = $this->db->prepare(
+                "INSERT INTO account_cashcredit_customer
+                 (customer, remark, add_operator, amount, status, billnumber, recordtime)
+                 VALUES
+                 (:customer, :remark, :operator, :amount, 1, :billnumber, :recordtime)",
+            );
+            $stmt->execute([
+                "customer" => $customerId,
+                "remark" => $remark,
+                "operator" => $userId,
+                "amount" => (float) ($item["return_sale"] ?? 0),
+                "billnumber" => (string) ($item["billnumber"] ?? ""),
+                "recordtime" => $recordTime,
+            ]);
+
+            $this->markReturnItemProcessed($itemRecordId, 2, null);
+            $this->finalizeEventIfComplete((string) ($item["billnumber"] ?? ""), (int) ($item["alter_time"] ?? 0));
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $exception;
+        }
+    }
+
     private function attachReturnItems(array $events, string $billNumber): array
     {
+        if ($events === []) {
+            return [];
+        }
+
+        $first = $events[0] ?? null;
+        if (is_array($first) && array_key_exists("alter_time", $first) && !array_key_exists("alter_times", $first)) {
+            $infoStmt = $this->db->prepare(
+                "SELECT *
+                 FROM alter_bill_information
+                 WHERE recordid = :recordid
+                 LIMIT 1",
+            );
+
+            foreach ($events as &$item) {
+                $item["activity_info"] = null;
+
+                if ((int) ($item["activity"] ?? 0) > 0 && (int) ($item["find_record_id"] ?? 0) > 0) {
+                    $infoStmt->execute([
+                        "recordid" => (int) $item["find_record_id"],
+                    ]);
+                    $item["activity_info"] = $infoStmt->fetch() ?: null;
+                }
+            }
+            unset($item);
+
+            return $events;
+        }
+
         $itemStmt = $this->db->prepare(
             "SELECT *
              FROM alter_bill_mainsale
@@ -379,6 +614,196 @@ class BillReturn extends Model
         unset($event);
 
         return $events;
+    }
+
+    private function findPendingItemForUpdate(int $itemRecordId, int $shopId): ?array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT item.*, event.alter_shop
+             FROM alter_bill_mainsale AS item
+             INNER JOIN alter_bill_billdata AS event
+               ON event.billnumber = item.billnumber
+              AND event.alter_times = item.alter_time
+             WHERE item.recordid = :recordid
+               AND item.activity = 0
+               AND event.activity_update = 0
+             LIMIT 1
+             FOR UPDATE",
+        );
+        $stmt->execute([
+            "recordid" => $itemRecordId,
+        ]);
+        $item = $stmt->fetch();
+
+        if ($item === false) {
+            return null;
+        }
+
+        if ($shopId > 0 && (int) ($item["alter_shop"] ?? 0) !== $shopId) {
+            return null;
+        }
+
+        return $item;
+    }
+
+    private function loadReplacementStockForUpdate(int $type, int $rowId, int $shopId): ?array
+    {
+        if ($type === 1) {
+            $stmt = $this->db->prepare(
+                "SELECT item_stock_id AS row_id,
+                        item_name_id AS part_id,
+                        item_cat_id AS cat_id,
+                        item_name,
+                        gen_refno AS code,
+                        item_cost_price AS cost,
+                        stock_current AS stock_current,
+                        1 AS type
+                 FROM shop_stock_item
+                 WHERE item_stock_id = :row_id
+                   AND stock_in_shop = :shop_id
+                 LIMIT 1
+                 FOR UPDATE",
+            );
+        } elseif ($type === 2) {
+            $stmt = $this->db->prepare(
+                "SELECT item_stock_id_imei AS row_id,
+                        item_name_id AS part_id,
+                        item_cat_id AS cat_id,
+                        item_name,
+                        imei_no AS code,
+                        item_cost_price AS cost,
+                        stock_current AS stock_current,
+                        2 AS type
+                 FROM shop_stock_imei
+                 WHERE item_stock_id_imei = :row_id
+                   AND stock_in_shop = :shop_id
+                 LIMIT 1
+                 FOR UPDATE",
+            );
+        } else {
+            $stmt = $this->db->prepare(
+                "SELECT recordid AS row_id,
+                        item_name_id AS part_id,
+                        item_cat_id AS cat_id,
+                        card_name AS item_name,
+                        '0' AS code,
+                        cost_price AS cost,
+                        current_stock AS stock_current,
+                        3 AS type
+                 FROM shop_rcv_stock
+                 WHERE recordid = :row_id
+                   AND stock_in_shop = :shop_id
+                 LIMIT 1
+                 FOR UPDATE",
+            );
+        }
+
+        $stmt->execute([
+            "row_id" => $rowId,
+            "shop_id" => $shopId,
+        ]);
+        $row = $stmt->fetch();
+
+        return $row ?: null;
+    }
+
+    private function replacementAvailableStock(int $type, array $replacement): int
+    {
+        return $type === 3
+            ? (int) ($replacement["stock_current"] ?? 0)
+            : (int) ($replacement["stock_current"] ?? 0);
+    }
+
+    private function decrementReplacementStock(int $type, int $rowId, int $qty): void
+    {
+        if ($type === 1) {
+            $stmt = $this->db->prepare(
+                "UPDATE shop_stock_item
+                 SET stock_current = stock_current - :qty
+                 WHERE item_stock_id = :row_id",
+            );
+        } elseif ($type === 2) {
+            $stmt = $this->db->prepare(
+                "UPDATE shop_stock_imei
+                 SET stock_current = 0
+                 WHERE item_stock_id_imei = :row_id",
+            );
+        } else {
+            $stmt = $this->db->prepare(
+                "UPDATE shop_rcv_stock
+                 SET current_stock = current_stock - :qty
+                 WHERE recordid = :row_id",
+            );
+        }
+
+        $params = ["row_id" => $rowId];
+        if ($type !== 2) {
+            $params["qty"] = $qty;
+        }
+
+        $stmt->execute($params);
+    }
+
+    private function insertAlterInformation(array $data): int
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO alter_bill_information
+             (billnumber, part_id, cat_id, type, item_name, imei_part_no, cost, regular_price, qty, sub_total, return_money, collect_money, operator, operation_time)
+             VALUES
+             (:billnumber, :part_id, :cat_id, :type, :item_name, :imei_part_no, :cost, :regular_price, :qty, :sub_total, :return_money, :collect_money, :operator, :operation_time)",
+        );
+        $stmt->execute($data);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    private function markReturnItemProcessed(int $itemRecordId, int $activity, ?int $infoId): void
+    {
+        $sql = "UPDATE alter_bill_mainsale
+                SET activity = :activity";
+        $params = [
+            "activity" => $activity,
+            "recordid" => $itemRecordId,
+        ];
+
+        if ($infoId !== null) {
+            $sql .= ", find_record_id = :info_id";
+            $params["info_id"] = $infoId;
+        }
+
+        $sql .= " WHERE recordid = :recordid";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+    }
+
+    private function finalizeEventIfComplete(string $billNumber, int $alterTime): void
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*)
+             FROM alter_bill_mainsale
+             WHERE billnumber = :billnumber
+               AND alter_time = :alter_time
+               AND activity = 0",
+        );
+        $stmt->execute([
+            "billnumber" => $billNumber,
+            "alter_time" => $alterTime,
+        ]);
+
+        if ((int) $stmt->fetchColumn() > 0) {
+            return;
+        }
+
+        $update = $this->db->prepare(
+            "UPDATE alter_bill_billdata
+             SET activity_update = 1
+             WHERE billnumber = :billnumber
+               AND alter_times = :alter_time",
+        );
+        $update->execute([
+            "billnumber" => $billNumber,
+            "alter_time" => $alterTime,
+        ]);
     }
 
     private function restockReturnedItem(array $line, int $shopId, int $billedShop, int $returnQty, string $recordTime): void
@@ -596,5 +1021,16 @@ class BillReturn extends Model
             "finalized_time" => $data["finalized_time"] ?? null,
             "create_time" => $data["create_time"] ?? date("Y-m-d H:i:s"),
         ]);
+    }
+
+    private function insertCashBook(array $data): void
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO cash_book
+             (op_date, shop, user, pay_type, remark, open_balance, cash_in, cash_out, close_balance)
+             VALUES
+             (:op_date, :shop, :user, :pay_type, :remark, 0, :cash_in, :cash_out, 0)",
+        );
+        $stmt->execute($data);
     }
 }
