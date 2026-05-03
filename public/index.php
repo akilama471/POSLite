@@ -30,6 +30,16 @@ $router->post("/cashier/cash-in/accounts/{id}/update", "CashInController@updateA
 $router->get("/reports", "ReportController@index", ["auth", "permission:p_62"]);
 $router->get("/reports/sales/shop", "ReportController@shopSale", ["auth", "permission:p_21"]);
 $router->get("/reports/sales/category", "ReportController@categorySale", ["auth", "permission:p_24"]);
+
+$router->get("/reports/cashier/transactions", "ReportController@cashierTransactions", ["auth", "permission:p_34"]);
+$router->get("/reports/cashier/openclose", "ReportController@cashierOpenClose", ["auth", "permission:p_35"]);
+$router->get("/reports/cashier/expenses", "ReportController@cashierExpenses", ["auth", "permission:p_36"]);
+$router->get("/reports/cashier/profit", "ReportController@cashierProfit", ["auth", "permission:p_38"]);
+
+$router->get("/reports/product/categories", "ReportController@productCategories", ["auth", "permission:p_6"]);
+$router->get("/reports/product/items", "ReportController@productList", ["auth", "permission:p_7"]);
+$router->get("/reports/product/stock", "ReportController@productStock", ["auth", "permission:p_8"]);
+
 $router->post("/reports/api/fetch", "ReportController@fetch", ["auth", "permission:p_62"]);
 
 // Repair Center
