@@ -295,6 +295,40 @@ class StockTransferController
         redirect("/stock/transfers/complaints");
     }
 
+    public function printNote(Request $request, string $id): void
+    {
+        $auth = auth_user() ?? [];
+        $model = new StockTransfer();
+        $transfer = $model->findWithLogs($id);
+
+        if ($transfer === null) {
+            $_SESSION["flash"] = ["type" => "error", "message" => "Transfer note was not found."];
+            redirect("/stock/transfers");
+        }
+
+        // Fetch company info for header
+        $companyModel = new Company();
+        $company = $companyModel->primary();
+
+        // Find transfer handle by user name
+        $handlerName = "User Not Found";
+        if (($transfer["transfer_user_id"] ?? 0) > 0) {
+            $userModel = new User();
+            $handler = $userModel->findById((int) $transfer["transfer_user_id"]);
+            if ($handler !== null) {
+                $handlerName = $handler["visibledata"] ?? "";
+            }
+        }
+
+        View::make("stock/transfers/print", [
+            "title" => "Download My Transfer Note",
+            "auth" => $auth,
+            "transfer" => $transfer,
+            "company" => $company,
+            "handlerName" => $handlerName,
+        ], "print");
+    }
+
     private function validCsrf(Request $request, string $redirectPath): bool
     {
         if (verify_csrf((string) $request->input("_token"))) {

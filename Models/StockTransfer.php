@@ -654,6 +654,31 @@ class StockTransfer extends Model
         }
     }
 
+    public function findWithLogs(string $transferId): ?array
+    {
+        $sql = "SELECT main.*,
+                       from_shop.shop_info_name AS from_shop_name,
+                       user.visibledata AS processed_operator_name
+                FROM stock_transmain AS main
+                LEFT JOIN sys_shop AS from_shop
+                  ON from_shop.shopid = main.trans_fromshop
+                LEFT JOIN sys_user AS user
+                  ON user.myid = main.processed_operator
+                WHERE main.trans_id = :trans_id
+                LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(["trans_id" => $transferId]);
+        $row = $stmt->fetch();
+        
+        if ($row === false) {
+            return null;
+        }
+        
+        $rows = [$row];
+        $this->attachLogs($rows);
+        return $rows[0];
+    }
+
     private function findByTransferId(string $transferId, int $shopId, bool $incoming): ?array
     {
         if ($incoming) {

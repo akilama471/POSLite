@@ -14,6 +14,18 @@ $router->get("/dashboard", "DashboardController@index", ["auth"]);
 $router->get("/cashier", "CashierController@index", ["auth"]);
 $router->post("/cashier/start", "CashierController@start", ["auth"]);
 $router->post("/cashier/close", "CashierController@close", ["auth"]);
+
+// Expenses
+$router->get("/cashier/expenses", "ExpenseController@index", ["auth", "permission:p_57"]);
+$router->post("/cashier/expenses", "ExpenseController@store", ["auth", "permission:p_57", "cashier"]);
+$router->post("/cashier/expenses/accounts", "ExpenseController@storeAccount", ["auth", "permission:p_60"]);
+$router->post("/cashier/expenses/accounts/{id}/update", "ExpenseController@updateAccount", ["auth", "permission:p_60"]);
+
+// Cash In
+$router->get("/cashier/cash-in", "CashInController@index", ["auth", "permission:p_57"]);
+$router->post("/cashier/cash-in", "CashInController@store", ["auth", "permission:p_57", "cashier"]);
+$router->post("/cashier/cash-in/accounts", "CashInController@storeAccount", ["auth", "permission:p_61"]);
+$router->post("/cashier/cash-in/accounts/{id}/update", "CashInController@updateAccount", ["auth", "permission:p_61"]);
 $router->get("/pos", "PosController@index", ["auth", "permission:p_2", "cashier"]);
 $router->get("/pos/slots/{slot}", "PosController@switchSlot", ["auth", "permission:p_2", "cashier"]);
 $router->post("/pos/slots/{slot}/clear", "PosController@clearSlot", ["auth", "permission:p_2", "cashier"]);
@@ -146,5 +158,21 @@ $router->post("/stock/transfers/received/{id}/accept", "StockTransferController@
 $router->post("/stock/transfers/received/{id}/complain", "StockTransferController@complain", ["auth", "permission:p_50"]);
 $router->get("/stock/transfers/complaints", "StockTransferController@complaints", ["auth"]);
 $router->post("/stock/transfers/complaints/{id}", "StockTransferController@resolveComplaint", ["auth"]);
+$router->get("/stock/transfers/{id}/print", "StockTransferController@printNote", ["auth", "permission:p_49"]);
+
+// Stock Adjust
+$router->get("/stock/adjust", "StockAdjustController@index", ["auth", "permission:p_54"]);
+$router->post("/stock/adjust/search", "StockAdjustController@search", ["auth", "permission:p_54"]);
+$router->post("/stock/adjust/submit", "StockAdjustController@submit", ["auth", "permission:p_54"]);
+
+// Stock Remove
+$router->get("/stock/remove", "StockRemoveController@index", ["auth", "permission:p_53"]);
+$router->post("/stock/remove/search", "StockRemoveController@search", ["auth", "permission:p_53"]);
+$router->post("/stock/remove/submit", "StockRemoveController@submit", ["auth", "permission:p_53"]);
+
+// Stock Return
+$router->get("/stock/returns/create", "StockReturnController@create", ["auth", "permission:p_51"]);
+$router->post("/stock/returns/search", "StockReturnController@search", ["auth", "permission:p_51"]);
+$router->post("/stock/returns/submit", "StockReturnController@submit", ["auth", "permission:p_51"]);
 
 $router->dispatch($_SERVER["REQUEST_URI"], $_SERVER["REQUEST_METHOD"]);

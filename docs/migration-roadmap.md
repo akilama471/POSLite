@@ -59,7 +59,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - auth login/dashboard views
 
 ## Step 2: Settings and Permission System
-- Status: next
+- Status: complete
 - Why next:
   - permission checks drive almost every other module
   - we need centralized authorization before exposing more routes
@@ -87,7 +87,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - manage function/report permissions
 
 ## Step 3: Master Data
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `manage_category.php`
   - `manage_item_a.php`
@@ -116,7 +116,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - safe write actions
 
 ## Step 4: Cashier and Opening/Closing
-- Status: pending
+- Status: partially complete
 - Legacy sources:
   - `cashier_onoff.php`
   - `shop_openbalance.php`
@@ -139,7 +139,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - cashier slot checks
 
 ## Step 5: POS Core
-- Status: pending
+- Status: complete
 - Why isolated:
   - highest risk domain
   - many temp tables and side effects
@@ -166,7 +166,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - bill search/reprint/cancel
 
 ## Step 6: Customer Finance
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `customer_accounts.php`
   - `customer_chashcredit_list.php`
@@ -187,7 +187,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - ledger history
 
 ## Step 7: Supplier Finance and GRN
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `grn_new.php`
   - `grn_add.php`
@@ -212,7 +212,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - supplier balances/payments
 
 ## Step 8: Stock Operations
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `transfer_product.php`
   - `transfer_product_new.php`
@@ -364,8 +364,6 @@ For each step:
 8. Move to next domain only after the previous slice is stable.
 
 ## Immediate Next Task
-Start Step 2:
-- migrate `sys_settings.php`
-- migrate user management
-- migrate permission/profile mapping
-- centralize function/report authorization into middleware/helpers
+Start Step 4 (Remaining parts):
+- migrate `add_expense.php` & `expence_account.php`
+- migrate `cashin_account.php` & cash-in logic

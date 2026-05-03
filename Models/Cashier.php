@@ -180,4 +180,92 @@ class Cashier extends Model
             throw $exception;
         }
     }
+
+    public function addExpense(int $shopId, int $userId, int $accountId, float $amount, string $reason): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $recordTime = date("Y-m-d H:i:s");
+            $remark = "Expences Update:" . $reason;
+
+            $insertCashBook = $this->db->prepare(
+                "INSERT INTO cash_book
+                 (op_date, shop, user, pay_type, remark, open_balance, cash_in, cash_out, close_balance)
+                 VALUES
+                 (:op_date, :shop, :user, 1, :remark, 0, 0, :cash_out, 0)"
+            );
+            $insertCashBook->execute([
+                "op_date" => $recordTime,
+                "shop" => $shopId,
+                "user" => $userId,
+                "remark" => $remark,
+                "cash_out" => $amount,
+            ]);
+
+            $insertExpenseLog = $this->db->prepare(
+                "INSERT INTO expence_log
+                 (record_time, shop_id, operator_id, account_id, amount, remark)
+                 VALUES
+                 (:record_time, :shop_id, :operator_id, :account_id, :amount, :remark)"
+            );
+            $insertExpenseLog->execute([
+                "record_time" => $recordTime,
+                "shop_id" => $shopId,
+                "operator_id" => $userId,
+                "account_id" => $accountId,
+                "amount" => $amount,
+                "remark" => $reason,
+            ]);
+
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            $this->db->rollBack();
+            throw $exception;
+        }
+    }
+
+    public function addCashIn(int $shopId, int $userId, int $accountId, float $amount, string $reason): void
+    {
+        $this->db->beginTransaction();
+
+        try {
+            $recordTime = date("Y-m-d H:i:s");
+            $remark = "Cash In Update:" . $reason;
+
+            $insertCashBook = $this->db->prepare(
+                "INSERT INTO cash_book
+                 (op_date, shop, user, pay_type, remark, open_balance, cash_in, cash_out, close_balance)
+                 VALUES
+                 (:op_date, :shop, :user, 1, :remark, 0, :cash_in, 0, 0)"
+            );
+            $insertCashBook->execute([
+                "op_date" => $recordTime,
+                "shop" => $shopId,
+                "user" => $userId,
+                "remark" => $remark,
+                "cash_in" => $amount,
+            ]);
+
+            $insertCashInLog = $this->db->prepare(
+                "INSERT INTO cashin_log
+                 (record_time, shop_id, operator_id, account_id, amount, remark)
+                 VALUES
+                 (:record_time, :shop_id, :operator_id, :account_id, :amount, :remark)"
+            );
+            $insertCashInLog->execute([
+                "record_time" => $recordTime,
+                "shop_id" => $shopId,
+                "operator_id" => $userId,
+                "account_id" => $accountId,
+                "amount" => $amount,
+                "remark" => $reason,
+            ]);
+
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            $this->db->rollBack();
+            throw $exception;
+        }
+    }
 }

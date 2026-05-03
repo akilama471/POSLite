@@ -869,8 +869,34 @@ Scope completed:
 
 Deferred in this slice:
 - the legacy half-finished per-line “release with corrected amount” editor
-- print/download transfer note document output
-- stock-return, stock-adjust, and stock-remove workflows
+
+## 2026-05-03 Deferred Stock Management Slice
+Migrated from:
+- `old-code/app/DownloadTransferNote.php`
+- `old-code/app/stock_adjust.php` & `c_stock_adjust.php`
+- `old-code/app/stock_remove.php` & `c_stock_remove.php`
+- `old-code/app/return_stock.php` & `c_stock_return_sch.php`
+
+Implemented in:
+- `new-code/Models/StockAdjust.php`
+- `new-code/Models/StockRemove.php`
+- `new-code/Models/StockReturn.php`
+- `new-code/controller/StockAdjustController.php`
+- `new-code/controller/StockRemoveController.php`
+- `new-code/controller/StockReturnController.php`
+- `new-code/views/stock/transfers/print.php`
+- `new-code/views/stock/adjust/index.php`
+- `new-code/views/stock/remove/index.php`
+- `new-code/views/stock/returns/create.php`
+
+Scope completed:
+- added transfer note print view and integrated print button in outgoing/incoming transfers
+- added Stock Adjustment workspace allowing search by name/code and manual quantity modification (logging to `stock_edit_log`)
+- added Stock Removal workspace allowing permanent removal of stock with reasons (logging to `stock_delete_log`)
+- added Stock Return to Supplier workspace allowing direct quantity return and cost updates (logging to `stock_return_log`)
+
+Deferred in this slice:
+- the legacy half-finished per-line “release with corrected amount” editor (from transfer complaints)
 
 ## Notes For Tomorrow
 - Reuse the current MVC pattern already established:

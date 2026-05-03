@@ -19,13 +19,7 @@ $formatMoney = static function (mixed $value): string {
     </header>
 
     <div class="shell-grid">
-        <aside class="sidebar">
-            <h3>Cashier</h3>
-            <div class="nav-group">
-                <a class="nav-link active" href="/cashier">Duty On / Off</a>
-                <a class="nav-link" href="/dashboard">Back to Dashboard</a>
-            </div>
-        </aside>
+        <?php require BASE_PATH . "/views/cashier/_nav.php"; ?>
 
         <main class="page">
             <?php require BASE_PATH . "/views/settings/_flash.php"; ?>
