@@ -1,0 +1,20 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/bootstrap/console.php';
+
+foreach (glob(__DIR__ . '/core/Console/*.php') as $file) {
+    require_once $file;
+}
+foreach (glob(__DIR__ . '/core/Migrations/*.php') as $file) {
+    require_once $file;
+}
+foreach (glob(__DIR__ . '/commands/*.php') as $file) {
+    require_once $file;
+}
+
+$kernel = new Core\Console\Kernel();
+$kernel->handle($argv);
