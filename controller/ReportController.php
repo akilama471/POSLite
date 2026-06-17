@@ -39,6 +39,50 @@ class ReportController
         ]);
     }
 
+    public function salesBestSale(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/sales/bestsale", ["title" => "Best Selling Items Report", "shops" => $shops]);
+    }
+
+    public function salesItemWise(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/sales/itemwise", ["title" => "Item Wise Sale Report", "shops" => $shops]);
+    }
+
+    public function salesItemCatWise(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        $catModel = new Category();
+        $categories = $catModel->all();
+        View::make("reports/sales/itemcatwise", ["title" => "Item + Category Wise Sale Report", "shops" => $shops, "categories" => $categories]);
+    }
+
+    public function salesOverCost(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/sales/overcost", ["title" => "Over-Cost Sales Report", "shops" => $shops]);
+    }
+
+    public function salesUnderCost(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/sales/undercost", ["title" => "Under-Cost Sales Report", "shops" => $shops]);
+    }
+
+    public function salesPhoneSale(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/sales/phonesale", ["title" => "Phone / IMEI Sale Report", "shops" => $shops]);
+    }
+
     public function cashierTransactions(Request $request): void
     {
         $shopModel = new Shop();
@@ -81,6 +125,27 @@ class ReportController
             "title" => "Shop Sale Profit",
             "shops" => $shops,
         ]);
+    }
+
+    public function cashierCashIn(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/cashier/cashin", ["title" => "Cash-In Report", "shops" => $shops]);
+    }
+
+    public function cashierAccWiseExpenses(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/cashier/accwise_expenses", ["title" => "Account-Wise Expenses Report", "shops" => $shops]);
+    }
+
+    public function cashierOperation(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/cashier/operation", ["title" => "Cashier Operation Log", "shops" => $shops]);
     }
 
     public function productCategories(Request $request): void
@@ -216,6 +281,48 @@ class ReportController
             "shops" => $shops,
             "categories" => $categories,
         ]);
+    }
+
+    public function grnReturns(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/grn/returns", ["title" => "Stock Return List", "shops" => $shops]);
+    }
+
+    public function grnReturnDetail(Request $request): void
+    {
+        View::make("reports/grn/return_detail", ["title" => "Return Document Detail"]);
+    }
+
+    public function grnDiscard(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/grn/discard", ["title" => "Discard Log", "shops" => $shops]);
+    }
+
+    public function grnTransferBin(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/grn/transfer_bin", ["title" => "Transfer Bin Items Report", "shops" => $shops]);
+    }
+
+    public function grnSalesReturnBin(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        View::make("reports/grn/sales_return_bin", ["title" => "Customer Sales Return Bin", "shops" => $shops]);
+    }
+
+    public function grnSupplierWise(Request $request): void
+    {
+        $shopModel = new Shop();
+        $shops = $shopModel->all();
+        $supplierModel = new Supplier();
+        $suppliers = $supplierModel->all();
+        View::make("reports/grn/supplier_wise", ["title" => "Supplier-Wise GRN Report", "shops" => $shops, "suppliers" => $suppliers]);
     }
 
     // ── Inventory Logs ────────────────────────────────────────
@@ -469,6 +576,102 @@ class ReportController
             if ($reportType === "transfer_logcheck") {
                 $itemCode = (string) $request->input("item_code", "");
                 $data = $engine->getTransferLogCheck($itemCode);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            // ── Extended Reports fetch endpoints ──
+            if ($reportType === "best_sale") {
+                $data = $engine->getBestSaleReport($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "item_wise_sale") {
+                $itemName = (string) $request->input("item_name", "");
+                $data = $engine->getItemWiseSale($fromDate, $toDate, $shopId, $itemName);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "item_cat_wise_sale") {
+                $categoryId = (int) $request->input("category_id", -1);
+                $data = $engine->getItemCatWiseSale($fromDate, $toDate, $shopId, $categoryId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "over_cost_sale") {
+                $data = $engine->getOverCostSale($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "under_cost_sale") {
+                $data = $engine->getUnderCostSale($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "phone_sale") {
+                $imei = (string) $request->input("imei", "");
+                $data = $engine->getPhoneSale($fromDate, $toDate, $shopId, $imei);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "cashier_cashin") {
+                $data = $engine->getCashierCashIn($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "cashier_accwise_expenses") {
+                $data = $engine->getCashierAccWiseExpenses($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "cashier_operation_log") {
+                $data = $engine->getCashierOperationLog($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_return_list") {
+                $data = $engine->getGrnReturnList($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_return_detail") {
+                $returnRef = (string) $request->input("return_ref", "");
+                $data = $engine->getGrnReturnDetail($returnRef);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_discard_log") {
+                $data = $engine->getGrnDiscardLog($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_transfer_bin") {
+                $data = $engine->getGrnTransferBin($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_sales_return_bin") {
+                $data = $engine->getGrnSalesReturnBin($fromDate, $toDate, $shopId);
+                echo json_encode(["status" => "success", "data" => $data]);
+                return;
+            }
+
+            if ($reportType === "grn_supplier_wise") {
+                $supplierId = (int) $request->input("supplier_id", -1);
+                $data = $engine->getGrnSupplierWise($fromDate, $toDate, $shopId, $supplierId);
                 echo json_encode(["status" => "success", "data" => $data]);
                 return;
             }

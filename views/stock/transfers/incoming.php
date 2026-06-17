@@ -34,7 +34,8 @@
                                                 <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
                                                 <button class="btn btn-primary" type="submit">Accept Received Items</button>
                                             </form>
-                                            <a class="btn btn-info" href="/stock/transfers/<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>/print" target="_blank" style="background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center;">Print Note</a>
+                                            <a class="btn" href="/print/transfer-note?docid=<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>" target="_blank" style="background-color: #a78bfa; color: #1a1a2e; font-weight:600; display: inline-flex; align-items: center; justify-content: center;">Thermal Print Note</a>
+                                            <a class="btn btn-info" href="/stock/transfers/<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>/print" target="_blank" style="background-color: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center;">A4/Standard Print</a>
                                             <form method="POST" action="/stock/transfers/received/<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>/complain" style="min-width:280px;">
                                                 <input type="hidden" name="_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, "UTF-8") ?>">
                                                 <div class="form-row" style="margin:0;">

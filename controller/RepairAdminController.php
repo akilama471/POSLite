@@ -37,39 +37,36 @@ class RepairAdminController
         redirect("/repair/admin/faults");
     }
 
-    public function faultsUpdate(Request $request, array $args): void
+    public function faultsUpdate(Request $request, string $id): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
             redirect("/repair/admin/faults");
         }
 
-        $id = (int) ($args["id"] ?? 0);
+        $recordId = (int) $id;
         $name = trim((string) $request->input("name", ""));
-        
-        $faultModel = new RepairFault();
+
         if ($name === "") {
-            // Delete action (status 2) if name is empty and they hit 'delete'?
-            // Wait, we can just use a separate delete route. But for now update requires a name.
             $_SESSION["flash"] = ["type" => "error", "message" => "Fault name cannot be empty."];
             redirect("/repair/admin/faults");
         }
 
-        $faultModel->update($id, $name);
+        $faultModel = new RepairFault();
+        $faultModel->update($recordId, $name);
         $_SESSION["flash"] = ["type" => "success", "message" => "Fault updated."];
         redirect("/repair/admin/faults");
     }
 
-    public function faultsDelete(Request $request, array $args): void
+    public function faultsDelete(Request $request, string $id): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
             redirect("/repair/admin/faults");
         }
-        
-        $id = (int) ($args["id"] ?? 0);
+
         $faultModel = new RepairFault();
-        $faultModel->delete($id);
+        $faultModel->delete((int) $id);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Fault deleted."];
         redirect("/repair/admin/faults");
@@ -110,38 +107,37 @@ class RepairAdminController
         redirect("/repair/admin/belongs");
     }
 
-    public function belongsUpdate(Request $request, array $args): void
+    public function belongsUpdate(Request $request, string $id): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
             redirect("/repair/admin/belongs");
         }
 
-        $id = (int) ($args["id"] ?? 0);
+        $recordId = (int) $id;
         $name = trim((string) $request->input("name", ""));
-        
+
         if ($name === "") {
             $_SESSION["flash"] = ["type" => "error", "message" => "Belong name cannot be empty."];
             redirect("/repair/admin/belongs");
         }
 
         $belongModel = new RepairBelong();
-        $belongModel->update($id, $name);
-        
+        $belongModel->update($recordId, $name);
+
         $_SESSION["flash"] = ["type" => "success", "message" => "Belong updated."];
         redirect("/repair/admin/belongs");
     }
 
-    public function belongsDelete(Request $request, array $args): void
+    public function belongsDelete(Request $request, string $id): void
     {
         if (!verify_csrf((string) $request->input("_token"))) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Invalid CSRF token."];
             redirect("/repair/admin/belongs");
         }
-        
-        $id = (int) ($args["id"] ?? 0);
+
         $belongModel = new RepairBelong();
-        $belongModel->delete($id);
+        $belongModel->delete((int) $id);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Belong deleted."];
         redirect("/repair/admin/belongs");

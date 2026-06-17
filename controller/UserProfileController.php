@@ -65,7 +65,7 @@ class UserProfileController
         $new = (string) $request->input("new_password", "");
         $confirm = (string) $request->input("confirm_password", "");
 
-        if (sha1($current) !== ($user["murapadaya"] ?? "")) {
+        if (!$userModel->verifyPassword($user, $current)) {
             $_SESSION["flash"] = ["type" => "error", "message" => "Current password does not match."];
             redirect("/settings/profile");
         }
@@ -75,7 +75,7 @@ class UserProfileController
             redirect("/settings/profile");
         }
 
-        $userModel->updatePassword((int) $auth["user_id"], sha1($new));
+        $userModel->updatePassword((int) $auth["user_id"], password_hash($new, PASSWORD_BCRYPT));
         $_SESSION["flash"] = ["type" => "success", "message" => "Password updated successfully."];
         redirect("/settings/profile");
     }

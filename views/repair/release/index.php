@@ -11,6 +11,19 @@
         <main class="page">
             <?php require BASE_PATH . "/views/settings/_flash.php"; ?>
 
+            <?php if (isset($_SESSION["released_job"])): ?>
+                <section class="card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div class="tag" style="background:#e8f5e9; color:#2e7d32;">Bill Finalized</div>
+                            <p style="margin:12px 0 0;">Repair bill for Job <strong><?= htmlspecialchars($_SESSION["released_job"], ENT_QUOTES, "UTF-8") ?></strong> has been successfully finalized.</p>
+                        </div>
+                        <a href="/print/repair-bill?docid=<?= urlencode($_SESSION["released_job"]) ?>" target="_blank" class="btn btn-primary">Print Repair Bill</a>
+                    </div>
+                </section>
+                <?php unset($_SESSION["released_job"]); ?>
+            <?php endif; ?>
+
             <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px;">
                 <section class="card stack">
                     <h2>Make Bill for Repair Job</h2>

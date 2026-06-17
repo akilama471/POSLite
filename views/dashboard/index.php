@@ -40,14 +40,14 @@ $cards = [
                     <?php if (!($permissions[$item["key"]] ?? false)): ?>
                         <?php continue; ?>
                     <?php endif; ?>
+                    <?php if ($item["href"] === "#"): ?>
+                        <?php continue; ?>
+                    <?php endif; ?>
                     <a
                         class="nav-link <?= $currentPath === $item["href"] ? "active" : "" ?>"
                         href="<?= htmlspecialchars($item["href"], ENT_QUOTES, "UTF-8") ?>"
                     >
                         <?= htmlspecialchars($item["label"], ENT_QUOTES, "UTF-8") ?>
-                        <?php if (!$item["migrated"]): ?>
-                            <span class="muted" style="display:block; margin-top:4px; font-size:0.82rem;">Queued for migration</span>
-                        <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
             </div>
@@ -56,9 +56,8 @@ $cards = [
         <main class="page">
             <div class="stack">
                 <section class="panel" style="padding: 22px;">
-                    <div class="tag">Legacy dashboard migrated</div>
-                    <h1 style="margin: 14px 0 8px;">Operational snapshot</h1>
-                    <p class="section-copy">This screen replaces the old iframe-based home shell with a routed dashboard view. The metrics still read from the legacy `dash_data` table and respect the logged-in shop scope.</p>
+                    <h1 style="margin: 0 0 8px;">Today's Overview</h1>
+                    <p class="section-copy">Real-time snapshot of today's sales, purchases, repairs, and cashier activity.</p>
                 </section>
 
                 <section class="grid cards">

@@ -41,7 +41,8 @@
                                                 <button class="btn btn-primary" type="submit">Process Transport</button>
                                             </form>
                                         <?php endif; ?>
-                                        <a class="btn btn-info" href="/stock/transfers/<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>/print" target="_blank" style="background-color: #3b82f6; color: white;">Print Note</a>
+                                        <a class="btn" href="/print/transfer-note?docid=<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>" target="_blank" style="background-color: #a78bfa; color: #1a1a2e; font-weight:600;">Thermal Print Note</a>
+                                        <a class="btn btn-info" href="/stock/transfers/<?= rawurlencode((string) ($transfer["trans_id"] ?? "")) ?>/print" target="_blank" style="background-color: #3b82f6; color: white;">A4/Standard Print</a>
                                     </div>
                                 </div>
 

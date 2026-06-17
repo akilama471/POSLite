@@ -19,5 +19,6 @@ class ListCommand extends Command
         echo "list\n";
         echo "migrate\n";
         echo "make:migration\n";
+        echo "serve\n";
     }
 }

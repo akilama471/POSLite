@@ -1,0 +1,42 @@
+[2026-06-17 21:37:52] Error: Call to a member function register() on int in I:\Project\Products\Nextgen Easy POS\new-code\vendor\_laravel_ide\discover-f5442aeac73a6a9021bd7ce113d6a606.php:44
+#0 {main}
+
+[2026-06-17 21:53:33] Error: Call to a member function register() on int in I:\Project\Products\Nextgen Easy POS\new-code\vendor\_laravel_ide\discover-5c3cbe5e47b16e6c5fd1967f09c399da.php:44
+#0 {main}
+
+[2026-06-17 22:09:22] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'ankaya' in 'where clause' in I:\Project\Products\Nextgen Easy POS\new-code\Models\User.php:14
+#0 I:\Project\Products\Nextgen Easy POS\new-code\Models\User.php(14): PDOStatement->execute(Array)
+#1 I:\Project\Products\Nextgen Easy POS\new-code\controller\AuthController.php(55): User->findActiveByUsername('admin')
+#2 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(72): AuthController->login(Object(Request))
+#3 I:\Project\Products\Nextgen Easy POS\new-code\middleware\GuestMiddleware.php(13): Router->{closure}()
+#4 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(19): GuestMiddleware->handle(Object(Request), Object(Closure))
+#5 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(23): MiddlewareManager->{closure}()
+#6 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(86): MiddlewareManager->run(Object(Request), Object(Closure))
+#7 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(32): Router->callHandler('AuthController@...', Array, Array)
+#8 I:\Project\Products\Nextgen Easy POS\new-code\public\index.php(11): Router->dispatch('/login', 'POST')
+#9 {main}
+
+[2026-06-17 22:09:57] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'statusu' in 'where clause' in I:\Project\Products\Nextgen Easy POS\new-code\Models\User.php:14
+#0 I:\Project\Products\Nextgen Easy POS\new-code\Models\User.php(14): PDOStatement->execute(Array)
+#1 I:\Project\Products\Nextgen Easy POS\new-code\controller\AuthController.php(55): User->findActiveByUsername('admin')
+#2 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(72): AuthController->login(Object(Request))
+#3 I:\Project\Products\Nextgen Easy POS\new-code\middleware\GuestMiddleware.php(13): Router->{closure}()
+#4 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(19): GuestMiddleware->handle(Object(Request), Object(Closure))
+#5 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(23): MiddlewareManager->{closure}()
+#6 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(86): MiddlewareManager->run(Object(Request), Object(Closure))
+#7 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(32): Router->callHandler('AuthController@...', Array, Array)
+#8 I:\Project\Products\Nextgen Easy POS\new-code\public\index.php(11): Router->dispatch('/login', 'POST')
+#9 {main}
+
+[2026-06-17 22:18:52] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'shopid' in 'where clause' in I:\Project\Products\Nextgen Easy POS\new-code\Models\Shop.php:12
+#0 I:\Project\Products\Nextgen Easy POS\new-code\Models\Shop.php(12): PDOStatement->execute(Array)
+#1 I:\Project\Products\Nextgen Easy POS\new-code\controller\AuthController.php(80): Shop->findByShopId(0)
+#2 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(72): AuthController->login(Object(Request))
+#3 I:\Project\Products\Nextgen Easy POS\new-code\middleware\GuestMiddleware.php(13): Router->{closure}()
+#4 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(19): GuestMiddleware->handle(Object(Request), Object(Closure))
+#5 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(23): MiddlewareManager->{closure}()
+#6 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(86): MiddlewareManager->run(Object(Request), Object(Closure))
+#7 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(32): Router->callHandler('AuthController@...', Array, Array)
+#8 I:\Project\Products\Nextgen Easy POS\new-code\public\index.php(11): Router->dispatch('/login', 'POST')
+#9 {main}
+

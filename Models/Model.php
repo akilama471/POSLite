@@ -26,43 +26,6 @@ class Model
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Insert
-    public function create($data)
-    {
-        $columns = implode(",", array_keys($data));
-        $placeholders = ":" . implode(", :", array_keys($data));
-
-        $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
-        $stmt = $this->db->prepare($sql);
-
-        return $stmt->execute($data);
-    }
-
-    // Update
-    public function update($id, $data)
-    {
-        $fields = "";
-
-        foreach ($data as $key => $value) {
-            $fields .= "$key = :$key,";
-        }
-
-        $fields = rtrim($fields, ",");
-
-        $sql = "UPDATE {$this->table} SET $fields WHERE id = :id";
-        $data["id"] = $id;
-
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute($data);
-    }
-
-    // Delete
-    public function delete($id)
-    {
-        $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE id = ?");
-        return $stmt->execute([$id]);
-    }
-
     /* ======================
            RELATIONSHIPS
         ======================= */

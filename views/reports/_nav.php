@@ -11,6 +11,12 @@ $path = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
         <?php endif; ?>
         <?php if (can("p_24")): ?>
             <a class="nav-link <?= $path === '/reports/sales/category' ? 'active' : '' ?>" href="/reports/sales/category">Category Wise Sale Report</a>
+            <a class="nav-link <?= $path === '/reports/sales/bestsale' ? 'active' : '' ?>" href="/reports/sales/bestsale">Best Selling Items</a>
+            <a class="nav-link <?= $path === '/reports/sales/itemwise' ? 'active' : '' ?>" href="/reports/sales/itemwise">Item Wise Sale</a>
+            <a class="nav-link <?= $path === '/reports/sales/itemcatwise' ? 'active' : '' ?>" href="/reports/sales/itemcatwise">Item + Category Wise Sale</a>
+            <a class="nav-link <?= $path === '/reports/sales/overcost' ? 'active' : '' ?>" href="/reports/sales/overcost">Over-Cost Sales</a>
+            <a class="nav-link <?= $path === '/reports/sales/undercost' ? 'active' : '' ?>" href="/reports/sales/undercost">Under-Cost Sales</a>
+            <a class="nav-link <?= $path === '/reports/sales/phonesale' ? 'active' : '' ?>" href="/reports/sales/phonesale">Phone / IMEI Sale</a>
         <?php endif; ?>
 
         <!-- Other categories will be added here in future phases -->
@@ -26,6 +32,9 @@ $path = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
         <?php endif; ?>
         <?php if (can("p_38")): ?>
             <a class="nav-link <?= $path === '/reports/cashier/profit' ? 'active' : '' ?>" href="/reports/cashier/profit">Shop Sale Profit</a>
+            <a class="nav-link <?= $path === '/reports/cashier/cashin' ? 'active' : '' ?>" href="/reports/cashier/cashin">Cash-In Report</a>
+            <a class="nav-link <?= $path === '/reports/cashier/accwise_expenses' ? 'active' : '' ?>" href="/reports/cashier/accwise_expenses">Account-Wise Expenses</a>
+            <a class="nav-link <?= $path === '/reports/cashier/operation' ? 'active' : '' ?>" href="/reports/cashier/operation">Cashier Operation Log</a>
         <?php endif; ?>
 
         <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Product Reports</div>
@@ -71,6 +80,12 @@ $path = parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH);
             <a class="nav-link <?= $path === '/reports/grn/list' ? 'active' : '' ?>" href="/reports/grn/list">GRN List</a>
             <a class="nav-link <?= $path === '/reports/grn/detail' ? 'active' : '' ?>" href="/reports/grn/detail">GRN Detail Viewer</a>
             <a class="nav-link <?= $path === '/reports/grn/reorder' ? 'active' : '' ?>" href="/reports/grn/reorder">Reorder Alert Report</a>
+            <a class="nav-link <?= $path === '/reports/grn/returns' ? 'active' : '' ?>" href="/reports/grn/returns">Stock Return List</a>
+            <a class="nav-link <?= $path === '/reports/grn/return_detail' ? 'active' : '' ?>" href="/reports/grn/return_detail">Return Document Detail</a>
+            <a class="nav-link <?= $path === '/reports/grn/discard' ? 'active' : '' ?>" href="/reports/grn/discard">Discard Log</a>
+            <a class="nav-link <?= $path === '/reports/grn/transfer_bin' ? 'active' : '' ?>" href="/reports/grn/transfer_bin">Transfer Bin Items</a>
+            <a class="nav-link <?= $path === '/reports/grn/sales_return_bin' ? 'active' : '' ?>" href="/reports/grn/sales_return_bin">Customer Sales Return Bin</a>
+            <a class="nav-link <?= $path === '/reports/grn/supplier_wise' ? 'active' : '' ?>" href="/reports/grn/supplier_wise">Supplier-Wise GRN</a>
         <?php endif; ?>
 
         <div style="margin: 24px 0 4px; font-weight: bold; color: #a1b0b8; text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.05em;">Inventory Logs</div>

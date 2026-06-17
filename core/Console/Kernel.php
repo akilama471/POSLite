@@ -7,6 +7,8 @@ namespace Core\Console;
 use Commands\ListCommand;
 use Commands\MakeMigrationCommand;
 use Commands\MigrateCommand;
+use Commands\SeedCommand;
+use Commands\ServeCommand;
 
 class Kernel
 {
@@ -17,6 +19,8 @@ class Kernel
         $this->register(new ListCommand());
         $this->register(new MigrateCommand());
         $this->register(new MakeMigrationCommand());
+        $this->register(new SeedCommand());
+        $this->register(new ServeCommand());
     }
 
     private function register($command): void

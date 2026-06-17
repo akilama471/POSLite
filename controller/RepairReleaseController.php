@@ -85,6 +85,7 @@ class RepairReleaseController
         $logModel->addLog($jobId, "1", "Bill finalized for repair job.", "NA", 0, 0, $userId);
 
         $_SESSION["flash"] = ["type" => "success", "message" => "Bill finalized for Job $jobId."];
+        $_SESSION["released_job"] = $jobId;
         redirect("/repair/release");
     }
 }

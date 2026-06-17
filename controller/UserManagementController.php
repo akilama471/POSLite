@@ -74,7 +74,7 @@ class UserManagementController
 
         $userModel->createLegacyUser([
             "username" => $username,
-            "password" => sha1("pass123"),
+            "password" => password_hash("pass123", PASSWORD_BCRYPT),
             "display_name" => $displayName,
             "shop_id" => $shopId,
             "privilege_id" => $privilegeId,
@@ -104,7 +104,7 @@ class UserManagementController
 
         switch ($action) {
             case "reset-password":
-                $userModel->resetPassword($userId, sha1("pass123"));
+                $userModel->resetPassword($userId, password_hash("pass123", PASSWORD_BCRYPT));
                 $message = "Password reset to pass123.";
                 break;
             case "unlock":

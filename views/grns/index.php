@@ -100,7 +100,12 @@ $formatMoney = static function (mixed $value): string {
                                 <div><strong><?= htmlspecialchars((string) ($grn["grn_refno"] ?? ""), ENT_QUOTES, "UTF-8") ?></strong></div>
                                 <div class="muted"><?= htmlspecialchars((string) ($grn["operation_time"] ?? ""), ENT_QUOTES, "UTF-8") ?></div>
                             </div>
-                            <div class="muted">Result #<?= $index + 1 ?></div>
+                            <div style="text-align: right;">
+                                <div class="muted">Result #<?= $index + 1 ?></div>
+                                <a href="/print/grn-label?docid=<?= urlencode((string) ($grn["grn_refno"] ?? "")) ?>" target="_blank" class="btn" style="margin-top:8px; padding:4px 8px; font-size:12px; background:#eef2f5; color:#163041;">
+                                    Print GRN Label
+                                </a>
+                            </div>
                         </div>
 
                         <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:16px;">

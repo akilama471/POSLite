@@ -36,8 +36,9 @@ $cashierName = $cashier["visibledata"] ?? $cashier["ankaya"] ?? "";
         <main class="page">
             <section class="card" style="margin-bottom:18px;">
                 <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
-                    <a class="btn btn-primary" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/print" target="_blank" rel="noopener">Print Receipt</a>
-                    <a class="btn" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/barcodes" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041;">Barcode Labels</a>
+                    <a class="btn btn-primary" href="/print/invoice?docid=<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>&slotid=1" target="_blank" rel="noopener">Thermal Print Receipt</a>
+                    <a class="btn" href="/print/barcode?docid=<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041;">Thermal Barcode Labels</a>
+                    <a class="btn" href="/pos/receipts/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/print" target="_blank" rel="noopener" style="background:#eef2f5; color:#163041;">A4/Standard Print</a>
                     <?php if (can("p_33")): ?>
                         <a class="btn" href="/pos/bills/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/returns/create" style="background:#eef2f5; color:#163041;">Create Return</a>
                         <a class="btn" href="/pos/bills/<?= htmlspecialchars((string) $bill["billnumber"], ENT_QUOTES, "UTF-8") ?>/returns" style="background:#eef2f5; color:#163041;">Return History</a>

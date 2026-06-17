@@ -54,7 +54,13 @@ Start MySQL or MariaDB and confirm the database in `.env` is reachable.
 Run this from inside `new-code`:
 
 ```powershell
-php -S localhost:8000 -t public
+php artisan serve
+```
+
+Optional host and port:
+
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
 ```
 
 ### 5. Open the application in your browser

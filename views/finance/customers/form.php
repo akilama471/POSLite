@@ -26,6 +26,16 @@ $selectedCustomerId = (int) ($selectedCustomer["recordid"] ?? 0);
                         Time: <strong><?= htmlspecialchars((string) $receipt["recordtime"], ENT_QUOTES, "UTF-8") ?></strong>
                         <?php if (!empty($receipt["reference"])): ?><br>Cheque No: <strong><?= htmlspecialchars((string) $receipt["reference"], ENT_QUOTES, "UTF-8") ?></strong><?php endif; ?>
                     </p>
+                    <div style="margin-top: 14px;">
+                        <?php 
+                        $payTypeInt = $receipt["method"] === 'cash' ? 1 : ($receipt["method"] === 'cheque' ? 2 : 3);
+                        $printUrl = '/print/customer-payment?cusid=' . $selectedCustomerId . '&paytype=' . $payTypeInt . '&amtpay=' . urlencode((string)$receipt["amount"]) . '&chqunmber=' . urlencode((string)($receipt["reference"] ?? ''));
+                        ?>
+                        <a href="<?= htmlspecialchars($printUrl) ?>" target="_blank" class="btn btn-primary" style="display:inline-flex; align-items:center; gap:6px;">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"></path></svg>
+                            Print Receipt
+                        </a>
+                    </div>
                 </section>
             <?php endif; ?>
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 class AuthController
 {
+    private const MAX_ATTEMPTS = 5;
+    private const LOCKOUT_SECONDS = 60;
+
     public function showLoginForm(Request $request): void
     {
         View::make("auth/login", [
@@ -21,6 +24,22 @@ class AuthController
             redirect("/login");
         }
 
+        // ── Rate limiting ─────────────────────────────────────────────────────
+        $attempts  = (int) ($_SESSION["_login_attempts"] ?? 0);
+        $lockedAt  = isset($_SESSION["_login_locked_at"]) ? (int) $_SESSION["_login_locked_at"] : null;
+
+        if ($lockedAt !== null) {
+            $remaining = self::LOCKOUT_SECONDS - (time() - $lockedAt);
+            if ($remaining > 0) {
+                $_SESSION["flash_error"] = "Too many failed attempts. Please wait {$remaining} second(s) before trying again.";
+                redirect("/login");
+            }
+            // Lockout expired — reset counters
+            unset($_SESSION["_login_attempts"], $_SESSION["_login_locked_at"]);
+            $attempts = 0;
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         $username = trim((string) $request->input("u-name", ""));
         $password = (string) $request->input("u-pass", "");
 
@@ -29,32 +48,47 @@ class AuthController
             redirect("/login");
         }
 
-        $userModel = new User();
+        $userModel       = new User();
         $permissionModel = new Permission();
-        $shopModel = new Shop();
+        $shopModel       = new Shop();
 
         $user = $userModel->findActiveByUsername($username);
 
-        if ($user === null || sha1($password) !== ($user["murapadaya"] ?? "")) {
-            $_SESSION["flash_error"] = "Invalid username or password.";
+        if ($user === null || !$userModel->verifyPassword($user, $password)) {
+            // Increment failure counter
+            $attempts++;
+            $_SESSION["_login_attempts"] = $attempts;
+
+            if ($attempts >= self::MAX_ATTEMPTS) {
+                $_SESSION["_login_locked_at"] = time();
+                unset($_SESSION["_login_attempts"]);
+                $_SESSION["flash_error"] = "Too many failed attempts. Please wait " . self::LOCKOUT_SECONDS . " second(s) before trying again.";
+            } else {
+                $remaining = self::MAX_ATTEMPTS - $attempts;
+                $_SESSION["flash_error"] = "Invalid username or password. " . $remaining . " attempt(s) remaining.";
+            }
+
             redirect("/login");
         }
+
+        // Successful login — clear rate limit counters
+        unset($_SESSION["_login_attempts"], $_SESSION["_login_locked_at"]);
 
         session_regenerate_id(true);
 
         $permissions = $permissionModel->forUser((int) $user["myid"]);
-        $shop = $shopModel->findByShopId((int) ($user["shop_id"] ?? 0));
+        $shop        = $shopModel->findByShopId((int) ($user["shop_id"] ?? 0));
 
         $_SESSION["auth"] = [
-            "user_id" => (int) $user["myid"],
-            "username" => $user["ankaya"] ?? "",
-            "display_name" => $user["visibledata"] ?? $user["ankaya"] ?? "User",
-            "shop_id" => (int) ($user["shop_id"] ?? 0),
-            "shop_name" => $shop["shop_info_name"] ?? $shop["shopname"] ?? "All Shops",
-            "shop_phone" => $shop["shop_tel_1"] ?? "",
-            "privilege_id" => (int) ($user["privilageid"] ?? 0),
-            "permissions" => $permissions,
-            "cashier_on" => false,
+            "user_id"         => (int) $user["myid"],
+            "username"        => $user["ankaya"] ?? "",
+            "display_name"    => $user["visibledata"] ?? $user["ankaya"] ?? "User",
+            "shop_id"         => (int) ($user["shop_id"] ?? 0),
+            "shop_name"       => $shop["shop_info_name"] ?? $shop["shopname"] ?? "All Shops",
+            "shop_phone"      => $shop["shop_tel_1"] ?? "",
+            "privilege_id"    => (int) ($user["privilageid"] ?? 0),
+            "permissions"     => $permissions,
+            "cashier_on"      => false,
             "cashier_slot_id" => null,
         ];
 

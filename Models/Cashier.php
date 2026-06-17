@@ -268,4 +268,128 @@ class Cashier extends Model
             throw $exception;
         }
     }
+
+    /**
+     * Build a session balance summary for the close-duty confirmation screen.
+     * Mirrors the logic in legacy shop_close.php.
+     */
+    public function getSessionSummary(int $slotId, int $userId, int $shopId): array
+    {
+        // Open balances from the active log
+        $stmtLog = $this->db->prepare(
+            "SELECT cash_openbal, card_openbal, recordtime
+             FROM cashier_point_log
+             WHERE operation_slot = :slot AND user_id = :user AND status = 1
+             ORDER BY recordid DESC LIMIT 1"
+        );
+        $stmtLog->execute(['slot' => $slotId, 'user' => $userId]);
+        $log      = $stmtLog->fetch();
+        $openTime = $log['recordtime'] ?? date('Y-m-d H:i:s');
+        $cashOpen = (float)($log['cash_openbal'] ?? 0);
+        $cardOpen = (float)($log['card_openbal'] ?? 0);
+
+        // Sum income / expenses by pay type
+        $sumIn = function (int $pt) use ($openTime, $userId): float {
+            $s = $this->db->prepare(
+                "SELECT COALESCE(SUM(cash_in),0) FROM cash_book
+                 WHERE op_date >= :since AND user = :user AND pay_type = :pt AND cash_in > 0"
+            );
+            $s->execute(['since' => $openTime, 'user' => $userId, 'pt' => $pt]);
+            return (float)$s->fetchColumn();
+        };
+
+        $sumOut = function (int $pt) use ($openTime, $userId, $shopId): float {
+            $s = $this->db->prepare(
+                "SELECT COALESCE(SUM(cash_out),0) FROM cash_book
+                 WHERE op_date >= :since AND user = :user AND shop = :shop AND pay_type = :pt AND cash_out > 0"
+            );
+            $s->execute(['since' => $openTime, 'user' => $userId, 'shop' => $shopId, 'pt' => $pt]);
+            return (float)$s->fetchColumn();
+        };
+
+        $incCash  = $sumIn(1);
+        $incCard  = $sumIn(2);
+        $incCheq  = $sumIn(3);
+        $expCash  = $sumOut(1);
+        $expCard  = $sumOut(2);
+        $expTotal = $expCash + $expCard + $sumOut(3);
+
+        // Full transaction list for the breakdown table
+        $stmtTx = $this->db->prepare(
+            "SELECT pay_type, remark, cash_in, cash_out, op_date
+             FROM cash_book
+             WHERE op_date >= :since AND user = :user AND shop = :shop
+             ORDER BY op_date ASC"
+        );
+        $stmtTx->execute(['since' => $openTime, 'user' => $userId, 'shop' => $shopId]);
+
+        return [
+            'cash_open_bal'  => $cashOpen,
+            'card_open_bal'  => $cardOpen,
+            'inc_cash'       => $incCash,
+            'inc_card'       => $incCard,
+            'inc_cheq'       => $incCheq,
+            'exp_total'      => $expTotal,
+            'sys_close_cash' => $cashOpen + $incCash - $expCash,
+            'sys_close_card' => $cardOpen + $incCard - $expCard,
+            'transactions'   => $stmtTx->fetchAll(),
+        ];
+    }
+
+    /**
+     * List active users for the same shop — for the transfer-to dropdown.
+     */
+    public function listShopUsers(int $shopId): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT myid, visibledata FROM sys_user
+             WHERE statusu = 1 AND (shop_id = :shop OR shop_id = 0)
+             ORDER BY visibledata ASC"
+        );
+        $stmt->execute(['shop' => $shopId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Close duty with optional slot transfer to another operator.
+     * Pass transferToUserId = 0 to keep the slot with the current user.
+     */
+    public function closeDutyWithTransfer(
+        int $slotId,
+        int $userId,
+        float $cashClose,
+        float $cardClose,
+        int $transferToUserId = 0
+    ): void {
+        $activeLog = $this->activeLog($slotId, $userId);
+        if ($activeLog === null) {
+            throw new RuntimeException("Cashier sign-in details not found.");
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $now = date("Y-m-d H:i:s");
+
+            $this->db->prepare(
+                "UPDATE cashier_point_log
+                 SET close_time = :ct, cash_closebal = :cc, card_closebal = :cd, status = 0
+                 WHERE recordid = :id"
+            )->execute([
+                'ct' => $now, 'cc' => $cashClose,
+                'cd' => $cardClose, 'id' => (int)$activeLog['recordid'],
+            ]);
+
+            $newOperator = $transferToUserId > 0 ? $transferToUserId : $userId;
+            $this->db->prepare(
+                "UPDATE cashier_point_control
+                 SET user_off = :off, status = 0, current_operator = :op
+                 WHERE recordid = :slot"
+            )->execute(['off' => $now, 'op' => $newOperator, 'slot' => $slotId]);
+
+            $this->db->commit();
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
 }

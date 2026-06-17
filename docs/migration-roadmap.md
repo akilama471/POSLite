@@ -116,7 +116,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - safe write actions
 
 ## Step 4: Cashier and Opening/Closing
-- Status: partially complete
+- Status: complete
 - Legacy sources:
   - `cashier_onoff.php`
   - `shop_openbalance.php`
@@ -296,7 +296,7 @@ Convert `old-code` from procedural PHP pages into the `new-code` MVC application
   - background task endpoints
 
 ## Step 12: Printing and Document Output
-- Status: pending
+- Status: complete
 - Legacy sources:
   - `print*.php`
   - `barcodeprint*.php`
@@ -364,6 +364,9 @@ For each step:
 8. Move to next domain only after the previous slice is stable.
 
 ## Immediate Next Task
-Start Step 4 (Remaining parts):
-- migrate `add_expense.php` & `expence_account.php`
-- migrate `cashin_account.php` & cash-in logic
+Start Step 11 (Notifications, Tasks, SMS):
+- Create `NotificationController`, `SmsController`, `TaskController`
+- Build `Notification`, `Task` models
+- Implement inbox, unread count, compose, and background task endpoints
+
+See `docs/migration-audit.md` for the full validated status of all 13 steps.

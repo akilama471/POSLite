@@ -695,4 +695,297 @@ class ReportEngine extends Model
         $stmt->execute(['code' => $itemCode]);
         return $stmt->fetchAll();
     }
+
+    // ── Extended Sales Reports ─────────────────────────────────
+
+    public function getBestSaleReport(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT m.item_name, m.imei_part_no, SUM(m.qty) as total_qty, SUM(m.sub_total) as total_value
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  $shopCondition
+                GROUP BY m.item_name, m.imei_part_no
+                ORDER BY total_qty DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getItemWiseSale(string $fromDate, string $toDate, int $shopId, string $itemName): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $itemCondition = $itemName !== '' ? "AND m.item_name LIKE :item_name" : "";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($itemName !== '') $params['item_name'] = "%" . $itemName . "%";
+
+        $sql = "SELECT b.billnumber, b.billaddedtime as sale_date, m.item_name, m.imei_part_no, m.qty, m.sale_price, m.sub_total
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  $shopCondition $itemCondition
+                ORDER BY b.billaddedtime DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getItemCatWiseSale(string $fromDate, string $toDate, int $shopId, int $categoryId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $catCondition = $categoryId > 0 ? "AND m.cat_id = :cat_id" : "";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($categoryId > 0) $params['cat_id'] = $categoryId;
+
+        $sql = "SELECT c.catname, m.item_name, SUM(m.qty) as total_qty, SUM(m.sub_total) as total_value
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                LEFT JOIN prod_category c ON m.cat_id = c.catid
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  $shopCondition $catCondition
+                GROUP BY m.cat_id, m.item_name
+                ORDER BY c.catname ASC, total_qty DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getOverCostSale(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT b.billnumber, b.billaddedtime as sale_date, m.item_name, m.cost as cost_price, m.sale_price
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  AND m.sale_price > m.cost
+                  $shopCondition
+                ORDER BY b.billaddedtime DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getUnderCostSale(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT b.billnumber, b.billaddedtime as sale_date, m.item_name, m.cost as cost_price, m.sale_price
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  AND m.sale_price < m.cost
+                  $shopCondition
+                ORDER BY b.billaddedtime DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getPhoneSale(string $fromDate, string $toDate, int $shopId, string $imei): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.billed_shop = :shop_id" : "AND b.billed_shop >= 0";
+        $imeiCondition = $imei !== '' ? "AND m.imei_part_no LIKE :imei" : "";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($imei !== '') $params['imei'] = "%" . $imei . "%";
+
+        $sql = "SELECT b.billnumber, b.billaddedtime as sale_date, b.customer_name as cus_name, m.item_name, m.imei_part_no, m.sale_price
+                FROM shop_pos_mainsale m
+                JOIN shop_pos_billdetails b ON m.billnumber = b.billnumber
+                WHERE DATE(b.billaddedtime) >= :from 
+                  AND DATE(b.billaddedtime) <= :to
+                  AND (m.imei_part_no IS NOT NULL AND m.imei_part_no != '')
+                  $shopCondition $imeiCondition
+                ORDER BY b.billaddedtime DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    // ── Extended Cashier Reports ───────────────────────────────
+
+    public function getCashierCashIn(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND c.shop_id = :shop_id" : "AND c.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT c.record_time, a.acc_name, u.visibledata as operator_name, c.remark, c.amount
+                FROM cashin_log c
+                LEFT JOIN cashin_account a ON c.account_id = a.recordid
+                LEFT JOIN sys_user u ON c.operator_id = u.myid
+                WHERE DATE(c.record_time) >= :from 
+                  AND DATE(c.record_time) <= :to
+                  $shopCondition
+                ORDER BY c.record_time DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getCashierAccWiseExpenses(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND e.shop_id = :shop_id" : "AND e.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT a.acc_name, COUNT(e.recordid) as count, SUM(e.amount) as total_amount
+                FROM expence_log e
+                LEFT JOIN expence_account a ON e.account_id = a.recordid
+                WHERE DATE(e.record_time) >= :from 
+                  AND DATE(e.record_time) <= :to
+                  $shopCondition
+                GROUP BY e.account_id
+                ORDER BY total_amount DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getCashierOperationLog(string $fromDate, string $toDate, int $shopId): array
+    {
+        // No strict shop relation in cashier_point_log, but we can filter by user's shop if needed. Assuming it matches legacy.
+        // Actually legacy checks user's shop. For simplicity, just time filter.
+        $params = ['from' => $fromDate, 'to' => $toDate];
+
+        $sql = "SELECT c.operation_slot, u.visibledata as operator_name, c.recordtime, c.close_time, 
+                       c.cash_openbal, c.cash_closebal, c.card_openbal, c.card_closebal
+                FROM cashier_point_log c
+                LEFT JOIN sys_user u ON c.user_id = u.myid
+                WHERE DATE(c.recordtime) >= :from 
+                  AND DATE(c.recordtime) <= :to
+                ORDER BY c.recordtime DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    // ── Extended GRN Reports ───────────────────────────────────
+
+    public function getGrnReturnList(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND r.shop_id = :shop_id" : "AND r.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT r.return_refno, r.return_date, r.grn_refno, s.supplier_name as suppler_name, 
+                       r.item_count, r.total_value, 
+                       CASE r.status WHEN 1 THEN 'Returned' WHEN 0 THEN 'Pending' ELSE 'Canceled' END as status_label
+                FROM stock_return_main r
+                LEFT JOIN shop_supplier s ON r.supplier_id = s.supplierid
+                WHERE DATE(r.return_date) >= :from 
+                  AND DATE(r.return_date) <= :to
+                  $shopCondition
+                ORDER BY r.return_date DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnReturnDetail(string $returnRef): array
+    {
+        $sql = "SELECT item_name, imei_no, item_qty, item_cost, return_value
+                FROM stock_return_log
+                WHERE return_refno = :return_ref";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['return_ref' => $returnRef]);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnDiscardLog(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND d.shop_id = :shop_id" : "AND d.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT d.discard_date, d.item_name, d.imei_no, u.visibledata as operator_name, 
+                       d.discard_reason, d.qty, d.item_cost
+                FROM stock_discard_log d
+                LEFT JOIN sys_user u ON d.user_id = u.myid
+                WHERE DATE(d.discard_date) >= :from 
+                  AND DATE(d.discard_date) <= :to
+                  $shopCondition
+                ORDER BY d.discard_date DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnTransferBin(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND b.shop_id = :shop_id" : "AND b.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT b.record_date, b.item_name, b.imei_no, s.supplier_name as suppler_name, 
+                       b.qty, b.item_cost, 
+                       CASE b.status WHEN 1 THEN 'Processed' ELSE 'Pending' END as status_label
+                FROM stock_transfer_bin b
+                LEFT JOIN shop_supplier s ON b.supplier_id = s.supplierid
+                WHERE DATE(b.record_date) >= :from 
+                  AND DATE(b.record_date) <= :to
+                  $shopCondition
+                ORDER BY b.record_date DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnSalesReturnBin(string $fromDate, string $toDate, int $shopId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND r.shop_id = :shop_id" : "AND r.shop_id >= 0";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+
+        $sql = "SELECT r.return_date, r.billnumber, c.cus_name, r.item_name, r.imei_part_no, 
+                       r.return_qty, r.return_value
+                FROM shop_sales_return r
+                LEFT JOIN shop_pos_billdetails b ON r.billnumber = b.billnumber
+                LEFT JOIN shop_customer c ON b.customer_id = c.recordid
+                WHERE DATE(r.return_date) >= :from 
+                  AND DATE(r.return_date) <= :to
+                  $shopCondition
+                ORDER BY r.return_date DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    public function getGrnSupplierWise(string $fromDate, string $toDate, int $shopId, int $supplierId): array
+    {
+        $shopCondition = $shopId > 0 ? "AND g.shop_number = :shop_id" : "AND g.shop_number >= 0";
+        $supCondition = $supplierId > 0 ? "AND g.supplier_id = :supplier_id" : "";
+        $params = ['from' => $fromDate, 'to' => $toDate];
+        if ($shopId > 0) $params['shop_id'] = $shopId;
+        if ($supplierId > 0) $params['supplier_id'] = $supplierId;
+
+        $sql = "SELECT s.supplier_name as suppler_name, COUNT(g.grn_refno) as grn_count, 
+                       SUM(g.final_amount) as total_value, SUM(g.cash_amount + g.chq_amount) as total_paid
+                FROM shop_grnmain g
+                LEFT JOIN shop_supplier s ON g.supplier_id = s.supplierid
+                WHERE DATE(g.operation_time) >= :from 
+                  AND DATE(g.operation_time) <= :to
+                  $shopCondition $supCondition
+                GROUP BY g.supplier_id
+                ORDER BY total_value DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

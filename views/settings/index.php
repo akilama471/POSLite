@@ -2,9 +2,8 @@
     <header class="topbar">
         <div>
             <div class="brand">System Settings</div>
-            <div class="muted" style="color: #b8c6cf;">Centralized MVC settings and permission controls</div>
+            <div class="muted" style="color: #b8c6cf;">Manage users, shops, permissions, and system preferences</div>
         </div>
-        <div class="tag">Step 2 migration</div>
     </header>
 
     <div class="shell-grid">
@@ -12,8 +11,8 @@
 
         <main class="page">
             <section class="panel" style="padding: 22px;">
-                <h1 style="margin: 0 0 8px;">Settings overview</h1>
-                <p class="section-copy">This replaces the old iframe-based settings shell. The migrated routes below are active; the remaining shop and cashier settings are still queued for later migration steps.</p>
+                <h1 style="margin: 0 0 8px;">Settings Overview</h1>
+                <p class="section-copy">Configure users, access permissions, shops, and account preferences from this panel.</p>
             </section>
 
             <section class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 18px;">
