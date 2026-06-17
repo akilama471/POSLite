@@ -1,11 +1,8 @@
 <?php
 
+declare(strict_types=1);
+
 class Product extends Model
 {
-    protected $table = "products";
-
-    public function category()
-    {
-        return $this->belongsTo("categories", "category_id");
-    }
+    protected $table = "prod_items";
 }

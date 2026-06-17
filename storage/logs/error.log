@@ -40,3 +40,15 @@
 #8 I:\Project\Products\Nextgen Easy POS\new-code\public\index.php(11): Router->dispatch('/login', 'POST')
 #9 {main}
 
+[2026-06-17 22:20:16] PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'today_sale' in 'field list' in I:\Project\Products\Nextgen Easy POS\new-code\Models\Dashboard.php:12
+#0 I:\Project\Products\Nextgen Easy POS\new-code\Models\Dashboard.php(12): PDO->query('SELECT\n        ...')
+#1 I:\Project\Products\Nextgen Easy POS\new-code\controller\DashboardController.php(19): Dashboard->summary(1, 0)
+#2 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(72): DashboardController->index(Object(Request))
+#3 I:\Project\Products\Nextgen Easy POS\new-code\middleware\AuthMiddleware.php(13): Router->{closure}()
+#4 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(19): AuthMiddleware->handle(Object(Request), Object(Closure))
+#5 I:\Project\Products\Nextgen Easy POS\new-code\core\MiddlewareManager.php(23): MiddlewareManager->{closure}()
+#6 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(86): MiddlewareManager->run(Object(Request), Object(Closure))
+#7 I:\Project\Products\Nextgen Easy POS\new-code\core\Router.php(32): Router->callHandler('DashboardContro...', Array, Array)
+#8 I:\Project\Products\Nextgen Easy POS\new-code\public\index.php(11): Router->dispatch('/dashboard', 'GET')
+#9 {main}
+

@@ -6,13 +6,27 @@ class ItemColor extends Model
 {
     protected $table = "prod_item_color";
 
+    private function mapLegacyFields(?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        if (isset($row['id']) && !isset($row['color_id'])) {
+            $row['color_id'] = $row['id'];
+        }
+
+        return $row;
+    }
+
     public function allOrdered(): array
     {
         $stmt = $this->db->query(
-            "SELECT * FROM prod_item_color ORDER BY color_id ASC",
+            "SELECT * FROM prod_item_color ORDER BY id ASC",
         );
 
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll();
+        return array_map([$this, 'mapLegacyFields'], $rows);
     }
 
     public function existsByName(string $name, ?int $excludeId = null): bool
@@ -21,7 +35,7 @@ class ItemColor extends Model
         $params = ["name" => $name];
 
         if ($excludeId !== null) {
-            $sql .= " AND color_id <> :color_id";
+            $sql .= " AND id <> :color_id";
             $params["color_id"] = $excludeId;
         }
 
@@ -49,7 +63,7 @@ class ItemColor extends Model
         $stmt = $this->db->prepare(
             "UPDATE prod_item_color
              SET color_name = :color_name
-             WHERE color_id = :color_id",
+             WHERE id = :color_id",
         );
 
         return $stmt->execute([
@@ -61,7 +75,7 @@ class ItemColor extends Model
     public function deleteColor(int $colorId): bool
     {
         $stmt = $this->db->prepare(
-            "DELETE FROM prod_item_color WHERE color_id = :color_id",
+            "DELETE FROM prod_item_color WHERE id = :color_id",
         );
 
         return $stmt->execute(["color_id" => $colorId]);

@@ -6,13 +6,27 @@ class ProductCategory extends Model
 {
     protected $table = "prod_category";
 
+    private function mapLegacyFields(?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        if (isset($row['id']) && !isset($row['catid'])) {
+            $row['catid'] = $row['id'];
+        }
+
+        return $row;
+    }
+
     public function allOrdered(): array
     {
         $stmt = $this->db->query(
-            "SELECT * FROM prod_category ORDER BY catid ASC",
+            "SELECT * FROM prod_category ORDER BY id ASC",
         );
 
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll();
+        return array_map([$this, 'mapLegacyFields'], $rows);
     }
 
     public function existsByName(string $name): bool
@@ -33,7 +47,7 @@ class ProductCategory extends Model
         $stmt->execute(["name" => $name]);
 
         $category = $stmt->fetch();
-        return $category ?: null;
+        return $this->mapLegacyFields($category ?: null);
     }
 
     public function createCategory(string $name): bool
@@ -48,7 +62,7 @@ class ProductCategory extends Model
     public function updateCategory(int $id, string $name): bool
     {
         $stmt = $this->db->prepare(
-            "UPDATE prod_category SET catname = :name WHERE catid = :id",
+            "UPDATE prod_category SET catname = :name WHERE id = :id",
         );
 
         return $stmt->execute([
@@ -60,7 +74,7 @@ class ProductCategory extends Model
     public function deleteCategory(int $id): bool
     {
         $stmt = $this->db->prepare(
-            "DELETE FROM prod_category WHERE catid = :id",
+            "DELETE FROM prod_category WHERE id = :id",
         );
 
         return $stmt->execute(["id" => $id]);

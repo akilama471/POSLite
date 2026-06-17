@@ -6,24 +6,38 @@ class Privilege extends Model
 {
     protected $table = "sys_privilege";
 
+    private function mapLegacyFields(?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+
+        if (isset($row['id']) && !isset($row['privilegeid'])) {
+            $row['privilegeid'] = $row['id'];
+        }
+
+        return $row;
+    }
+
     public function findByPrivilegeId(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            "SELECT * FROM sys_privilege WHERE privilegeid = :id LIMIT 1",
+            "SELECT * FROM sys_privilege WHERE id = :id LIMIT 1",
         );
         $stmt->execute(["id" => $id]);
 
         $row = $stmt->fetch();
-        return $row ?: null;
+        return $this->mapLegacyFields($row ?: null);
     }
 
     public function allOrdered(): array
     {
         $stmt = $this->db->query(
-            "SELECT * FROM sys_privilege ORDER BY privilegeid ASC",
+            "SELECT * FROM sys_privilege ORDER BY id ASC",
         );
 
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll();
+        return array_map([$this, 'mapLegacyFields'], $rows);
     }
 
     public function createByName(string $name): bool
@@ -38,7 +52,7 @@ class Privilege extends Model
     public function updateName(int $id, string $name): bool
     {
         $stmt = $this->db->prepare(
-            "UPDATE sys_privilege SET privilegename = :name WHERE privilegeid = :id",
+            "UPDATE sys_privilege SET privilegename = :name WHERE id = :id",
         );
 
         return $stmt->execute([
