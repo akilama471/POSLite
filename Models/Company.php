@@ -29,4 +29,36 @@ class Company extends Model
         $company = $stmt->fetch();
         return $this->mapLegacyFields($company ?: null);
     }
+
+    public function listAll(): array
+    {
+        $stmt = $this->db->query("SELECT * FROM sys_company ORDER BY id ASC");
+        $companies = $stmt->fetchAll();
+        return array_map([$this, 'mapLegacyFields'], $companies);
+    }
+
+    public function createCompany(array $data): bool
+    {
+        $stmt = $this->db->prepare(
+            "INSERT INTO sys_company (company_name, company_address, company_phone, company_email)
+             VALUES (:company_name, :company_address, :company_phone, :company_email)"
+        );
+
+        return $stmt->execute([
+            "company_name" => $data["company_name"],
+            "company_address" => $data["company_address"] ?? null,
+            "company_phone" => $data["company_phone"] ?? null,
+            "company_email" => $data["company_email"] ?? null,
+        ]);
+    }
+
+    public function existsByName(string $name): bool
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM sys_company WHERE company_name = :name"
+        );
+        $stmt->execute(["name" => $name]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
 }

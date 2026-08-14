@@ -24,6 +24,9 @@
         <?php if (can("p_71")): ?>
             <a class="nav-link <?= $currentPath === "/settings/shops" ? "active" : "" ?>" href="/settings/shops">Shop List</a>
         <?php endif; ?>
+        <?php if ((auth_user()["user_role"] ?? "") === "admin"): ?>
+            <a class="nav-link <?= str_starts_with($currentPath, "/settings/companies") ? "active" : "" ?>" href="/settings/companies">Companies List</a>
+        <?php endif; ?>
         <a class="nav-link <?= $currentPath === "/settings/profile" ? "active" : "" ?>" href="/settings/profile">My Account</a>
         <a class="nav-link" href="/dashboard">Back to Dashboard</a>
     </div>

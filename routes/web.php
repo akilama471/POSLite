@@ -177,6 +177,9 @@ $router->get("/settings/shops/create",              "ShopController@create",    
 $router->post("/settings/shops",                    "ShopController@store",                  ["auth", "permission:p_70"]);
 $router->get("/settings/shops/{id}/edit",           "ShopController@edit",                   ["auth", "permission:p_71"]);
 $router->post("/settings/shops/{id}",               "ShopController@update",                 ["auth", "permission:p_71"]);
+$router->get("/settings/companies",                 "CompanyController@index",               ["auth"]);
+$router->get("/settings/companies/create",          "CompanyController@create",              ["auth"]);
+$router->post("/settings/companies",                "CompanyController@store",               ["auth"]);
 $router->get("/settings/profile",                   "UserProfileController@edit",            ["auth"]);
 $router->post("/settings/profile",                  "UserProfileController@updateDetails",   ["auth"]);
 $router->post("/settings/profile/password",         "UserProfileController@updatePassword",  ["auth"]);

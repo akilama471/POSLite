@@ -35,3 +35,10 @@ function app_env(string $key, ?string $default = null): ?string
 }
 
 require_once BASE_PATH . '/core/Database.php';
+require_once BASE_PATH . '/Models/Model.php';
+
+foreach (glob(BASE_PATH . '/Models/*.php') as $file) {
+    if (basename($file) !== 'Model.php') {
+        require_once $file;
+    }
+}

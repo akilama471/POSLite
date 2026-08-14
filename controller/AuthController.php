@@ -76,7 +76,7 @@ class AuthController
 
         session_regenerate_id(true);
 
-        $permissions = $permissionModel->forUser((int) $user["myid"]);
+        $permissions = $permissionModel->forUser((int) ($user["privilageid"] ?? 0));
         $shop        = $shopModel->findByShopId((int) ($user["shop_id"] ?? 0));
 
         $_SESSION["auth"] = [
@@ -87,6 +87,7 @@ class AuthController
             "shop_name"       => $shop["shop_info_name"] ?? $shop["shopname"] ?? "All Shops",
             "shop_phone"      => $shop["shop_tel_1"] ?? "",
             "privilege_id"    => (int) ($user["privilageid"] ?? 0),
+            "user_role"       => $user["user_role"] ?? "",
             "permissions"     => $permissions,
             "cashier_on"      => false,
             "cashier_slot_id" => null,

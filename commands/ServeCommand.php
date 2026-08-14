@@ -16,7 +16,7 @@ class ServeCommand extends Command
     public function handle($arguments)
     {
         $host = '127.0.0.1';
-        $port = '8000';
+        $port = '8014';
 
         for ($i = 0; $i < count($arguments); $i++) {
             $argument = $arguments[$i];

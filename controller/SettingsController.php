@@ -15,7 +15,7 @@ class SettingsController
 
     private function sections(): array
     {
-        return [
+        $sections = [
             [
                 "title" => "User Management",
                 "permission" => "p_63",
@@ -40,13 +40,28 @@ class SettingsController
                     ["label" => "Shop List", "href" => "/settings/shops", "permission" => "p_71"],
                 ],
             ],
-            [
-                "title" => "My Account",
+        ];
+
+        $auth = auth_user();
+        if (($auth["user_role"] ?? "") === "admin") {
+            $sections[] = [
+                "title" => "Company Management",
                 "permission" => null,
                 "items" => [
-                    ["label" => "Profile and Password", "href" => "/settings/profile", "permission" => null],
+                    ["label" => "Add Company", "href" => "/settings/companies/create", "permission" => null],
+                    ["label" => "Company List", "href" => "/settings/companies", "permission" => null],
                 ],
+            ];
+        }
+
+        $sections[] = [
+            "title" => "My Account",
+            "permission" => null,
+            "items" => [
+                ["label" => "Profile and Password", "href" => "/settings/profile", "permission" => null],
             ],
         ];
+
+        return $sections;
     }
 }
